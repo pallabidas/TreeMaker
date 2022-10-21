@@ -37,6 +37,8 @@ class pfjetInfo : public baseTree{
  private:
   pfjetInfo(){};
   edm::InputTag pfjetLabel_;
+  edm::InputTag genpartLabel_;
+  edm::InputTag genjetLabel_;
 
   //variables which would become branches
   //int PFJet_n;
@@ -56,8 +58,8 @@ class pfjetInfo : public baseTree{
   float jet_pt;
   float jet_eta;
   float jet_phi;
-/*  std::vector<float> jet_mass;
-  std::vector<float> jet_mass_raw;
+  float jet_mass;
+  //float jet_mass_raw;
   //std::vector<float> jet_pnet_probHbb;
   //std::vector<float> jet_pnet_probHcc;
   //std::vector<float> jet_pnet_probHqq;
@@ -67,25 +69,26 @@ class pfjetInfo : public baseTree{
   //std::vector<float> jet_pnet_probQCDc;
   //std::vector<float> jet_pnet_probQCDothers;
   //std::vector<float> jet_pnet_regmass;
-  std::vector<float> jet_ncand;
-  std::vector<float> jet_nel;
-  std::vector<float> jet_nmu;
-  std::vector<float> jet_nbhad;
-  std::vector<float> jet_nchad;
-  std::vector<float> jet_hflav;
-  std::vector<float> jet_pflav;
-  std::vector<float> jet_muflav;
-  std::vector<float> jet_elflav;
-  std::vector<float> jet_lepflav;
-  std::vector<float> jet_tauflav;
-  std::vector<float> jet_taudecaymode;
-  std::vector<float> jet_flav_2prong_partonjet_match;
-  std::vector<float> jet_flav_2prong_parton_match;
-  std::vector<float> jet_genmatch_pt;
-  std::vector<float> jet_genmatch_eta;
-  std::vector<float> jet_genmatch_phi;
-  std::vector<float> jet_genmatch_mass;
+  float jet_ncand;
+  float jet_nel;
+  float jet_nmu;
+  float jet_nbhad;
+  float jet_nchad;
+  float jet_hflav;
+  float jet_pflav;
+  //float jet_muflav;
+  //float jet_elflav;
+  float jet_lepflav;
+  //float jet_tauflav;
+  //float jet_taudecaymode;
+  //float jet_flav_2prong_partonjet_match;
+  //float jet_flav_2prong_parton_match;
+  float jet_genmatch_pt;
+  float jet_genmatch_eta;
+  float jet_genmatch_phi;
+  float jet_genmatch_mass;
 
+/*
   std::vector<float> nsv;
   std::vector<float> jet_sv_pt;
   std::vector<float> jet_sv_pt_log;
@@ -100,12 +103,12 @@ class pfjetInfo : public baseTree{
   std::vector<float> jet_sv_dxysig;
   std::vector<float> jet_sv_d3d;
   std::vector<float> jet_sv_d3dsig;
-  std::vector<float> jet_sv_ntrack;
+  std::vector<float> jet_sv_ntrack; */
 
   std::vector<float> jet_pfcand_pt;
   std::vector<float> jet_pfcand_eta;
   std::vector<float> jet_pfcand_phi;
-  std::vector<float> jet_pfcand_mass;
+/*  std::vector<float> jet_pfcand_mass;
   std::vector<float> jet_pfcand_energy;
   std::vector<float> jet_pfcand_pt_log;
   std::vector<float> jet_pfcand_energy_log;

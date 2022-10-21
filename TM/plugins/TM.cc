@@ -41,6 +41,7 @@ TM::TM(const edm::ParameterSet& iConfig):
   genToken = consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticleLabel_"));
   genEvtToken = consumes<GenEventInfoProduct>(iConfig.getUntrackedParameter<edm::InputTag>("genEventLabel_"));
   generatorlheToken = consumes<LHEEventProduct>(iConfig.getUntrackedParameter<edm::InputTag>("generatorlheLabel_"));
+  genJetToken = consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter<edm::InputTag>("genJetLabel_"));
   rhoToken = consumes<double>(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel_"));
   ecalBadCalib_token = consumes<bool>(iConfig.getUntrackedParameter<edm::InputTag>("ecalBadCalibLabel_")); 
   metfilterspatToken_ = consumes<TriggerResults>(iConfig.getUntrackedParameter<edm::InputTag>("metfilterspatLabel_"));

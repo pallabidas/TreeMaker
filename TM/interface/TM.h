@@ -100,6 +100,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       edm::EDGetTokenT<reco::GenParticleCollection> genToken;
       edm::EDGetTokenT<GenEventInfoProduct> genEvtToken;
       edm::EDGetTokenT<LHEEventProduct> generatorlheToken;
+      edm::EDGetTokenT<edm::View<reco::GenJet>> genJetToken;
       edm::EDGetTokenT<double> rhoToken;
       edm::EDGetTokenT<bool> ecalBadCalib_token;
       edm::EDGetTokenT<edm::TriggerResults> metfilterspatToken_;

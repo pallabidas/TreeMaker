@@ -73,6 +73,7 @@ process.demo = cms.EDAnalyzer('TM',
                               genParticleLabel_    = cms.untracked.InputTag("prunedGenParticles"),
                               genEventLabel_       = cms.untracked.InputTag("generator"),
                               generatorlheLabel_   = cms.untracked.InputTag("externalLHEProducer"),
+                              genJetLabel_         = cms.untracked.InputTag("slimmedGenJets"),
                               filleventInfo_       = cms.untracked.bool(True), 
                               fillpileUpInfo_      = cms.untracked.bool(False),   #false for data
                               pileUpLabel_         = cms.untracked.InputTag("slimmedAddPileupInfo"),
