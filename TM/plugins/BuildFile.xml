@@ -1,0 +1,32 @@
+<use   name="root"/>
+<use   name="FWCore/Framework"/>
+<use   name="FWCore/MessageLogger"/>
+<use   name="FWCore/ParameterSet"/>
+<use   name="FWCore/PluginManager"/>
+<use   name="FWCore/Utilities"/>
+<use   name="DQMServices/Core"/>
+<use   name="DataFormats/Math"/>
+<use   name="DataFormats/JetReco"/>
+<use   name="DataFormats/METReco"/>
+<use   name="DataFormats/PatCandidates"/>
+<use   name="DataFormats/Candidate"/>
+<use   name="DataFormats/Common"/>
+<use   name="DataFormats/Luminosity"/>
+<use   name="HLTrigger/HLTcore"/>
+<use   name="PhysicsTools/PatAlgos"/>
+<use   name="PhysicsTools/PatUtils"/>
+<use   name="PhysicsTools/CandUtils"/>
+<use   name="PhysicsTools/UtilAlgos"/>
+<use   name="CommonTools/UtilAlgos"/>
+<use   name="SimDataFormats/PileupSummaryInfo"/>
+<use   name="RecoEcal/EgammaCoreTools"/>
+<use   name="Geometry/CaloGeometry"/>
+<use   name="Geometry/CSCGeometry"/>
+<use   name="Geometry/RPCGeometry"/>
+<use   name="CondFormats/JetMETObjects"/>
+<use   name="JetMETCorrections/Objects"/>
+<use   name="TreeMaker/TM"/>
+<use   name="PhysicsTools/JetMCUtils"/>
+<library   file="*.cc" name="TreeMakerTMPlugins">
+  <flags   EDM_PLUGIN="1"/>
+</library>
