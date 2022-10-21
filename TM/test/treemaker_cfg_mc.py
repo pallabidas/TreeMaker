@@ -13,13 +13,34 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
 
 from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
 
+#https://twiki.cern.ch/twiki/bin/view/CMS/DeepJet
 updateJetCollection(
    process,
    jetSource = cms.InputTag('slimmedJets'),
-   labelName = 'UpdatedJEC',
-   jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute', 'L2L3Residual']), 'None')  # Update: Safe to always add 'L2L3Residual' as MC contains dummy L2L3Residual corrections (always set to 1)
+   pvSource = cms.InputTag('offlineSlimmedPrimaryVertices'),
+   svSource = cms.InputTag('slimmedSecondaryVertices'),
+   jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
+   btagDiscriminators = [
+      'pfDeepCSVJetTags:probb',
+      'pfDeepCSVJetTags:probc',
+      'pfDeepCSVJetTags:probudsg',
+      'pfDeepFlavourJetTags:probb',
+      'pfDeepFlavourJetTags:probc',
+      'pfDeepFlavourJetTags:probuds',
+      'pfDeepFlavourJetTags:probg',
+      'pfDeepFlavourJetTags:probbb',
+      'pfDeepFlavourJetTags:problepb'
+      ],
+   postfix='NewDFTraining'
 )
-process.updatedPatJetsUpdatedJEC.userData.userFloats.src = []
+
+#updateJetCollection(
+#   process,
+#   jetSource = cms.InputTag('slimmedJets'),
+#   labelName = 'UpdatedJEC',
+#   jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute', 'L2L3Residual']), 'None')  # Update: Safe to always add 'L2L3Residual' as MC contains dummy L2L3Residual corrections (always set to 1)
+#)
+#process.updatedPatJetsUpdatedJEC.userData.userFloats.src = []
 
 #Add the files 
 readFiles = cms.untracked.vstring()
@@ -27,8 +48,8 @@ secFiles = cms.untracked.vstring()
 readFiles.extend( [
 	#"root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/GJets_HT-40To100_TuneCP5_13TeV-madgraphMLM-pythia8/MINIAODSIM/102X_upgrade2018_realistic_v15-v1/120000/FB4E61D1-33FC-C248-B47C-EEB5334F6331.root"
         #"root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8/MINIAODSIM/102X_upgrade2018_realistic_v15-v1/20000/362B457C-213F-EE49-92B3-28063639CBBA.root"
-#        "file:/eos/user/p/pdas/lowmass_bbtautau/signal_ma12/miniaod/277A52E2-73EE-1247-AAA2-777FD6CB7509.root"
-        "root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/102X_upgrade2018_realistic_v15-v1/270000/BEA0934D-C518-9242-8390-9FBF304CF978.root"
+        "file:/eos/user/p/pdas/lowmass_bbtautau/signal_ma12/miniaod/277A52E2-73EE-1247-AAA2-777FD6CB7509.root"
+        #"root://cms-xrd-global.cern.ch//store/mc/RunIIAutumn18MiniAOD/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/MINIAODSIM/102X_upgrade2018_realistic_v15-v1/270000/BEA0934D-C518-9242-8390-9FBF304CF978.root"
     ] );
 
 process.source = cms.Source("PoolSource",
@@ -99,7 +120,7 @@ process.demo = cms.EDAnalyzer('TM',
                               ecalBadCalibLabel_   = cms.untracked.InputTag("ecalBadCalibReducedMINIAODFilter"),
                               fillpfjetInfo_       = cms.untracked.bool(True),
                               #jetCorrectorLabel_   = cms.untracked.InputTag("AK4PFchs"),
-                              pfjetLabel_          = cms.untracked.InputTag("selectedUpdatedPatJetsUpdatedJEC"),
+                              pfjetLabel_          = cms.untracked.InputTag("selectedUpdatedPatJetsNewDFTraining"),
                               filltauInfo_         = cms.untracked.bool(False),
                               tauLabel_            = cms.untracked.InputTag("slimmedTaus"),                              
                               stageL1Trigger       = cms.uint32(1),
@@ -129,14 +150,16 @@ process.puppi.useExistingWeights = True
 process.p = cms.Path(
 #    process.egammaPostRecoSeq*
     process.ecalBadCalibReducedMINIAODFilter*
-    process.patJetCorrFactorsUpdatedJEC*
-    process.updatedPatJetsUpdatedJEC*
-    process.selectedUpdatedPatJetsUpdatedJEC*
+    #process.patJetCorrFactorsUpdatedJEC*
+    #process.updatedPatJetsUpdatedJEC*
+    #process.selectedUpdatedPatJetsUpdatedJEC*
     process.fullPatMetSequence*
     process.puppiMETSequence*
     process.fullPatMetSequencePuppi*
     process.demo
     )
+
+process.p.associate(process.patAlgosToolsTask)
 
 
 # reduce verbosity

@@ -83,6 +83,15 @@ class pfjetInfo : public baseTree{
   //float jet_taudecaymode;
   //float jet_flav_2prong_partonjet_match;
   //float jet_flav_2prong_parton_match;
+  float jet_deepcsv_probb;
+  float jet_deepcsv_probc;
+  float jet_deepcsv_probudsg;
+  float jet_deepjet_probb;
+  float jet_deepjet_probc;
+  float jet_deepjet_probuds;
+  float jet_deepjet_probg;
+  float jet_deepjet_probbb;
+  float jet_deepjet_problepb;
   float jet_genmatch_pt;
   float jet_genmatch_eta;
   float jet_genmatch_phi;
