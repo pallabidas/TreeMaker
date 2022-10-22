@@ -36,7 +36,7 @@
 <use   name="HLTrigger/HLTcore"/>
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="RecoEgamma/EgammaTools"/>
-
+<use   name="RecoBTag/FeatureTools"/>
 <export>
   <lib   name="1"/>
 </export>

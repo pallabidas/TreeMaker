@@ -21,6 +21,7 @@
 #include "TreeMaker/TM/interface/rhoInfo.h"
 #include "TreeMaker/TM/interface/pfmetInfo.h"
 #include "TreeMaker/TM/interface/pfjetInfo.h"
+#include "TreeMaker/TM/interface/jetInfo.h"
 #include "TreeMaker/TM/interface/tauInfo.h"
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
@@ -65,6 +66,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       bool fillrhoInfo_;
       bool fillpfmetInfo_;
       bool fillpfjetInfo_;
+      bool filljetInfo_;
       bool filltauInfo_;
 
       genparticleInfo *genparticleInfo_;
@@ -78,6 +80,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       rhoInfo         *rhoInfo_;
       pfmetInfo       *pfmetInfo_;
       pfjetInfo       *pfjetInfo_;
+      jetInfo         *jetInfo_;
       tauInfo         *tauInfo_;
 
       float rhoLepton; 
@@ -92,6 +95,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       edm::EDGetTokenT<pat::ElectronCollection> eleToken;
       edm::EDGetTokenT<edm::View<pat::MET>> metToken;
       edm::EDGetTokenT<edm::View<pat::MET>> puppimetToken;
+      edm::EDGetTokenT<edm::View<pat::Jet>> pfjetToken;
       edm::EDGetTokenT<edm::View<pat::Jet>> jetToken;
       //edm::EDGetTokenT<JetCorrectorParametersCollection> jecToken;
       edm::EDGetTokenT<edm::View<pat::Photon>> phoToken;
@@ -101,6 +105,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       edm::EDGetTokenT<GenEventInfoProduct> genEvtToken;
       edm::EDGetTokenT<LHEEventProduct> generatorlheToken;
       edm::EDGetTokenT<edm::View<reco::GenJet>> genJetToken;
+      edm::EDGetTokenT<edm::View<reco::VertexCompositePtrCandidate>> svToken;
       edm::EDGetTokenT<double> rhoToken;
       edm::EDGetTokenT<bool> ecalBadCalib_token;
       edm::EDGetTokenT<edm::TriggerResults> metfilterspatToken_;

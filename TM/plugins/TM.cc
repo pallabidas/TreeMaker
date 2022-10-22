@@ -24,6 +24,7 @@ TM::TM(const edm::ParameterSet& iConfig):
   fillrhoInfo_                 = iConfig.getUntrackedParameter<bool>("fillrhoInfo_");
   fillpfmetInfo_               = iConfig.getUntrackedParameter<bool>("fillpfmetInfo_");
   fillpfjetInfo_               = iConfig.getUntrackedParameter<bool>("fillpfjetInfo_");
+  filljetInfo_                 = iConfig.getUntrackedParameter<bool>("filljetInfo_");
   filltauInfo_                 = iConfig.getUntrackedParameter<bool>("filltauInfo_");
   
 
@@ -33,7 +34,8 @@ TM::TM(const edm::ParameterSet& iConfig):
   eleToken = consumes<pat::ElectronCollection>(iConfig.getUntrackedParameter<edm::InputTag>("electronLabel_"));
   metToken = consumes<edm::View<pat::MET>>(iConfig.getUntrackedParameter<edm::InputTag>("pfmetLabel_"));
   puppimetToken = consumes<edm::View<pat::MET>>(iConfig.getUntrackedParameter<edm::InputTag>("puppimetLabel_"));
-  jetToken = consumes<edm::View<pat::Jet>>(iConfig.getUntrackedParameter<edm::InputTag>("pfjetLabel_"));
+  pfjetToken = consumes<edm::View<pat::Jet>>(iConfig.getUntrackedParameter<edm::InputTag>("pfjetLabel_"));
+  jetToken = consumes<edm::View<pat::Jet>>(iConfig.getUntrackedParameter<edm::InputTag>("jetLabel_"));
   //jecToken = consumes<JetCorrectorParametersCollection>(iConfig.getUntrackedParameter<edm::InputTag>("jetCorrectorLabel_")); //getParameter<std::string>
   phoToken = consumes<edm::View<pat::Photon>>(iConfig.getUntrackedParameter<edm::InputTag>("photonLabel_"));
   TRToken = consumes<edm::TriggerResults>(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults_"));
@@ -42,6 +44,7 @@ TM::TM(const edm::ParameterSet& iConfig):
   genEvtToken = consumes<GenEventInfoProduct>(iConfig.getUntrackedParameter<edm::InputTag>("genEventLabel_"));
   generatorlheToken = consumes<LHEEventProduct>(iConfig.getUntrackedParameter<edm::InputTag>("generatorlheLabel_"));
   genJetToken = consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter<edm::InputTag>("genJetLabel_"));
+  svToken = consumes<edm::View<reco::VertexCompositePtrCandidate>>(iConfig.getUntrackedParameter<edm::InputTag>("svLabel_"));
   rhoToken = consumes<double>(iConfig.getUntrackedParameter<edm::InputTag>("rhoLabel_"));
   ecalBadCalib_token = consumes<bool>(iConfig.getUntrackedParameter<edm::InputTag>("ecalBadCalibLabel_")); 
   metfilterspatToken_ = consumes<TriggerResults>(iConfig.getUntrackedParameter<edm::InputTag>("metfilterspatLabel_"));
@@ -63,6 +66,7 @@ TM::TM(const edm::ParameterSet& iConfig):
   if( fillrhoInfo_)           rhoInfo_         = new rhoInfo        ("reco", tree_, debug_, iConfig);  
   if( fillpfmetInfo_)         pfmetInfo_       = new pfmetInfo      ("pat", tree_, debug_, iConfig);
   if( fillpfjetInfo_)         pfjetInfo_       = new pfjetInfo      ("pat", tree_, debug_, iConfig);
+  if( filljetInfo_)           jetInfo_         = new jetInfo        ("pat", tree_, debug_, iConfig);
   if( filltauInfo_)           tauInfo_         = new tauInfo        ("pat", tree_, debug_, iConfig);
   if(debug_) std::cout<<"got all the objects and branches in the tree"<<std::endl;
 }
@@ -109,6 +113,7 @@ TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   if( fillrhoInfo_)         rhoInfo_        ->Fill(iEvent);
   if( fillpfmetInfo_)       pfmetInfo_      ->Fill(iEvent);
   if( fillpfjetInfo_)       pfjetInfo_      ->Fill(iEvent, iSetup);
+  if( filljetInfo_)         jetInfo_        ->Fill(iEvent, iSetup);
   if( filltauInfo_)         tauInfo_        ->Fill(iEvent, pv, vtx);
 
   //if(debug_) std::cout<<"Filling tree"<<std::endl;
