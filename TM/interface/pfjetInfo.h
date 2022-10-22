@@ -22,18 +22,6 @@
 #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "JetMETCorrections/Objects/interface/JetCorrector.h"
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
-//#include "CMGTools/External/interface/PileupJetIdentifier.h"
-//#include "CMGTools/External/interface/PileupJetIdAlgo.h"
-#include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "DataFormats/Candidate/interface/VertexCompositePtrCandidate.h"
-#include "DataFormats/GeometryCommonDetAlgo/interface/Measurement1D.h"
-#include "RecoBTag/FeatureTools/interface/deep_helpers.h"
-#include "RecoVertex/VertexTools/interface/VertexDistance.h"
-#include "RecoVertex/VertexTools/interface/VertexDistanceXY.h"
-#include "RecoVertex/VertexTools/interface/VertexDistance3D.h"
-#include "FWCore/Utilities/interface/isFinite.h"
-
-using namespace btagbtvdeep;
 
 class pfjetInfo : public baseTree{
 
