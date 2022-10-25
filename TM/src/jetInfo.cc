@@ -12,11 +12,12 @@
 
 jetInfo::jetInfo(std::string name, TTree* tree, bool debug, const pset& iConfig):baseTree(name,tree,debug){
   if(debug) std::cout<<"in jet constructor"<<std::endl;
-  jetLabel_     = iConfig.getUntrackedParameter<edm::InputTag> ("jetLabel_");
+  jetLabel_       = iConfig.getUntrackedParameter<edm::InputTag> ("jetLabel_");
   genpartLabel_   = iConfig.getUntrackedParameter<edm::InputTag> ("genParticleLabel_");
   genjetLabel_    = iConfig.getUntrackedParameter<edm::InputTag> ("genJetLabel_");
   vtxLabel_       = iConfig.getUntrackedParameter<edm::InputTag> ("vertexLabel_");
   svLabel_        = iConfig.getUntrackedParameter<edm::InputTag> ("svLabel_");
+  isSignal_       = iConfig.getUntrackedParameter<bool> ("isSignal_");
   if(debug) std::cout<<"in jet constructor: calling SetBrances()"<<std::endl;
   SetBranches();
 }
@@ -25,7 +26,7 @@ jetInfo::~jetInfo(){
   delete tree_;
 }
 
-void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup,  TrackInfoBuilder trackinfo){
+void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, TrackInfoBuilder trackinfo){
   Clear();
   if(debug_)    std::cout<<"getting jet info"<<std::endl;
 
@@ -64,264 +65,359 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup,  Tra
   }
 
   /////// signal jet ///////
+  if(isSignal_){
 
-  edm::Handle<reco::GenParticleCollection> genParticles;
-  iEvent.getByLabel(genpartLabel_, genParticles);
-  if(not iEvent.getByLabel(genpartLabel_, genParticles )){
-    std::cout<<"FATAL EXCEPTION: "<<"Following Not Found: "<<genpartLabel_<<std::endl;
-    exit(0);
-  }
-
-  TLorentzVector v1;
-  TLorentzVector v2;
-  TLorentzVector higgs;
-  reco::GenParticleCollection genColl(*(genParticles.product()));
-  std::sort(genColl.begin(),genColl.end(),PtGreater());
-  for(reco::GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++){
-    if(genparticle->pdgId() == 25 && genparticle->status() == 62) higgs.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 125.09);
-    if(genparticle->pdgId() == 5 && genparticle->status() == 23) v1.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 4.18);
-    if(genparticle->pdgId() == -5 && genparticle->status() == 23) v2.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 4.18);
-  }
-  float dR_genBs = v1.DeltaR(v2);
-  //std::cout<<"dR_genBs: "<<dR_genBs<<std::endl;
-  TLorentzVector diB = v1 + v2;
-
-  edm::View<pat::Jet>::const_iterator jet;
-  pat::Jet matchedJet;
-  float deltar = 0.4;
-  for(jet = jets.begin(); jet != jets.end(); ++jet){
-    if(reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi()) < deltar){
-      deltar = reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi());
-      matchedJet = *jet;
-    }
-    //std::cout<<"deltar: "<<deltar<<std::endl;
-  }
-  //std::cout<<"matchedJet: "<<matchedJet.pt()<<"\t"<<matchedJet.eta()<<"\t"<<matchedJet.phi()<<std::endl;
-
-  // select signal events where bi-b system is boosted and match to a reco jet
-  if(dR_genBs < 0.8 && matchedJet.pt() > 20.){
-    deltar = 0.4;
-    for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
-      if(reco::deltaR(matchedJet, *genjet) < deltar){
-        deltar = reco::deltaR(matchedJet, *genjet);
-        jet_genmatch_pt = genjet->pt();
-        jet_genmatch_eta = genjet->eta();
-        jet_genmatch_phi = genjet->phi();
-        jet_genmatch_mass = genjet->mass();
-      }
-    }
-    // refer: https://github.com/cms-sw/cmssw/blob/master/RecoBTag/FeatureTools/plugins/DeepBoostedJetTagInfoProducer.cc
-    // find SVs associated with the jet
-    std::vector<const reco::VertexCompositePtrCandidate *> jetSVs;
-    for(const auto &sv : *svHandle){
-      if(reco::deltaR(matchedJet, sv) < 0.4){
-        jetSVs.push_back(&sv);
-      }
-    }
-    // sort by dxy significance
-    std::sort(jetSVs.begin(), jetSVs.end(), [&](const reco::VertexCompositePtrCandidate *sva, const reco::VertexCompositePtrCandidate *svb) { return btagbtvdeep::sv_vertex_comparator(*sva, *svb, *pv); });
-    nsv = jetSVs.size();
-    float etasign = matchedJet.eta() > 0 ? 1 : -1;
-
-    // build trackinfo
-    math::XYZVector jet_dir = matchedJet.momentum().Unit();
-    GlobalVector jet_ref_track_dir(matchedJet.px(), matchedJet.py(), matchedJet.pz());
-
-    // fill associated secondar vertices information
-    for (const auto *jetsv : jetSVs) {
-      jet_sv_pt.push_back(jetsv->pt());
-      jet_sv_pt_log.push_back(std::log(jetsv->pt()));
-      jet_sv_ptrel.push_back(jetsv->pt() / matchedJet.pt());
-      jet_sv_ptrel_log.push_back(std::log(jetsv->pt() / matchedJet.pt()));
-      jet_sv_eta.push_back(jetsv->eta());
-      jet_sv_phi.push_back(jetsv->phi());
-      jet_sv_mass.push_back(jetsv->mass());
-      jet_sv_energy.push_back(jetsv->energy());
-      jet_sv_energy_log.push_back(std::log(jetsv->energy()));
-      jet_sv_erel.push_back(jetsv->energy() / matchedJet.energy());
-      jet_sv_erel_log.push_back(std::log(jetsv->energy() / matchedJet.energy()));
-      jet_sv_deta.push_back(etasign * (jetsv->eta() - matchedJet.eta()));
-      jet_sv_dphi.push_back(reco::deltaPhi(*jetsv, matchedJet));
-      jet_sv_chi2.push_back(jetsv->vertexChi2());
-      const auto &dxy = btagbtvdeep::vertexDxy(*jetsv, *pv);
-      jet_sv_dxy.push_back(dxy.value());
-      jet_sv_dxysig.push_back(dxy.significance());
-      const auto &d3d = btagbtvdeep::vertexD3d(*jetsv, *pv);
-      jet_sv_d3d.push_back(d3d.value());
-      jet_sv_d3dsig.push_back(d3d.significance());
-      jet_sv_ntrack.push_back(jetsv->numberOfDaughters());
+    edm::Handle<reco::GenParticleCollection> genParticles;
+    iEvent.getByLabel(genpartLabel_, genParticles);
+    if(not iEvent.getByLabel(genpartLabel_, genParticles )){
+      std::cout<<"FATAL EXCEPTION: "<<"Following Not Found: "<<genpartLabel_<<std::endl;
+      exit(0);
     }
 
-    jet_pt = matchedJet.pt();
-    jet_eta = matchedJet.eta();
-    jet_phi = matchedJet.phi();
-    jet_mass = matchedJet.mass();
-    jet_ncand = matchedJet.neutralMultiplicity() + matchedJet.chargedMultiplicity();
-    jet_nel = matchedJet.electronMultiplicity();
-    jet_nmu = matchedJet.muonMultiplicity();
-    jet_nbhad = matchedJet.jetFlavourInfo().getbHadrons().size();
-    jet_nchad = matchedJet.jetFlavourInfo().getcHadrons().size();
-    jet_hflav = matchedJet.jetFlavourInfo().getHadronFlavour();
-    jet_pflav = matchedJet.jetFlavourInfo().getPartonFlavour();
-    jet_lepflav = matchedJet.jetFlavourInfo().getLeptons().size();
-    jet_deepcsv_probb = matchedJet.bDiscriminator("pfDeepCSVJetTags:probb");
-    jet_deepcsv_probc = matchedJet.bDiscriminator("pfDeepCSVJetTags:probc");
-    jet_deepcsv_probudsg = matchedJet.bDiscriminator("pfDeepCSVJetTags:probudsg");
-    jet_deepjet_probb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probb");
-    jet_deepjet_probc = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probc");
-    jet_deepjet_probuds = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probuds");
-    jet_deepjet_probg = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probg");
-    jet_deepjet_probbb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probbb");
-    jet_deepjet_problepb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:problepb");
-
-    // fill clustered particles information
-
-    //for (const auto &dau : matchedJet.daughterPtrVector()) {
-    //
-    //}
-    //std::cout<<"nC: "<< matchedJet.daughterPtrVector().size()<<"\t"<<matchedJet.numberOfSourceCandidatePtrs()<<std::endl;
-
-    int nConstituents = matchedJet.numberOfSourceCandidatePtrs();
-    for(int k = 0; k < nConstituents; k++){
-      reco::CandidatePtr pfcand = matchedJet.sourceCandidatePtr(k);
-      const auto *packed_cand = dynamic_cast<const pat::PackedCandidate *>(&(*pfcand)); // from https://github.com/hqucms/DNNTuples/blob/prod/UL/10_6_X_MiniAODv2/Ntupler/src/PFCompleteFiller.cc
-      jet_pfcand_px.push_back(packed_cand->px());
-      jet_pfcand_py.push_back(packed_cand->py());
-      jet_pfcand_pz.push_back(packed_cand->pz());
-      jet_pfcand_energy.push_back(packed_cand->energy());
-      jet_pfcand_pt.push_back(packed_cand->pt());
-      jet_pfcand_pt_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->pt()), -99));
-      jet_pfcand_e_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->energy()), -99));
-      jet_pfcand_phirel.push_back(reco::deltaPhi(*packed_cand, matchedJet));
-      jet_pfcand_etarel.push_back(etasign * (packed_cand->eta() - matchedJet.eta()));
-      jet_pfcand_abseta.push_back(std::abs(packed_cand->eta()));
-      jet_pfcand_puppiw.push_back(packed_cand->puppiWeight());
-      jet_pfcand_charge.push_back(packed_cand->charge());
-      jet_pfcand_isEl.push_back(std::abs(packed_cand->pdgId()) == 11);
-      jet_pfcand_isMu.push_back(std::abs(packed_cand->pdgId()) == 13);
-      jet_pfcand_isChargedHad.push_back(std::abs(packed_cand->pdgId()) == 211);
-      jet_pfcand_isGamma.push_back(std::abs(packed_cand->pdgId()) == 22);
-      jet_pfcand_isNeutralHad.push_back(std::abs(packed_cand->pdgId()) == 130);
-
-      // for neutral
-      float hcal_fraction = 0.;
-      if (packed_cand->pdgId() == 1 || packed_cand->pdgId() == 130) {
-        hcal_fraction = packed_cand->hcalFraction();
-      }
-      else if (packed_cand->isIsolatedChargedHadron()) {
-        hcal_fraction = packed_cand->rawHcalFraction();
-      }
-      jet_pfcand_hcalFrac.push_back(hcal_fraction);
-      jet_pfcand_hcalFracCalib.push_back(packed_cand->hcalFraction());
-
-      // for charged
-      jet_pfcand_VTX_ass.push_back(packed_cand->pvAssociationQuality());
-      jet_pfcand_fromPV.push_back(packed_cand->fromPV());
-      jet_pfcand_lostInnerHits.push_back(packed_cand->lostInnerHits());
-      jet_pfcand_trackHighPurity.push_back(packed_cand->trackHighPurity());
-
-      // impact parameters
-      jet_pfcand_dz.push_back(btagbtvdeep::catch_infs(packed_cand->dz()));
-      jet_pfcand_dzsig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dz() / packed_cand->dzError()) : 0);
-      jet_pfcand_dxy.push_back(btagbtvdeep::catch_infs(packed_cand->dxy()));
-      jet_pfcand_dxysig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dxy() / packed_cand->dxyError()) : 0);
-
-      // track info
-      if (packed_cand->bestTrack()) {
-        const auto* trk = packed_cand->bestTrack();
-        jet_pfcand_normchi2.push_back(btagbtvdeep::catch_infs(trk->normalizedChi2()));
-        jet_pfcand_quality.push_back(trk->qualityMask());
-
-        trackinfo.buildTrackInfo(&(*pfcand), jet_dir, jet_ref_track_dir, *pv);
-        jet_pfcand_btagEtaRel.push_back(trackinfo.getTrackEtaRel());
-        jet_pfcand_btagPtRatio.push_back(trackinfo.getTrackPtRatio());
-        jet_pfcand_btagPParRatio.push_back(trackinfo.getTrackPParRatio());
-        jet_pfcand_btagSip2dVal.push_back(trackinfo.getTrackSip2dVal());
-        jet_pfcand_btagSip2dSig.push_back(trackinfo.getTrackSip2dSig());
-        jet_pfcand_btagSip3dVal.push_back(trackinfo.getTrackSip3dVal());
-        jet_pfcand_btagSip3dSig.push_back(trackinfo.getTrackSip3dSig());
-        jet_pfcand_btagJetDistVal.push_back(trackinfo.getTrackJetDistVal());
-      }
-      else {
-        jet_pfcand_normchi2.push_back(999);
-        jet_pfcand_quality.push_back(0);
-        jet_pfcand_btagEtaRel.push_back(0);
-        jet_pfcand_btagPtRatio.push_back(0);
-        jet_pfcand_btagPParRatio.push_back(0);
-        jet_pfcand_btagSip2dVal.push_back(0);
-        jet_pfcand_btagSip2dSig.push_back(0);
-        jet_pfcand_btagSip3dVal.push_back(0);
-        jet_pfcand_btagSip3dSig.push_back(0);
-        jet_pfcand_btagJetDistVal.push_back(0);
-      }
+    TLorentzVector v1;
+    TLorentzVector v2;
+    TLorentzVector higgs;
+    reco::GenParticleCollection genColl(*(genParticles.product()));
+    std::sort(genColl.begin(),genColl.end(),PtGreater());
+    for(reco::GenParticleCollection::const_iterator genparticle = genParticles->begin(); genparticle != genParticles->end(); genparticle++){
+      if(genparticle->pdgId() == 25 && genparticle->status() == 62) higgs.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 125.09);
+      if(genparticle->pdgId() == 5 && genparticle->status() == 23) v1.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 4.18);
+      if(genparticle->pdgId() == -5 && genparticle->status() == 23) v2.SetPtEtaPhiM(genparticle->pt(), genparticle->eta(), genparticle->phi(), 4.18);
     }
-    if(debug_)    std::cout<<"filling jet info"<<std::endl;
-    tree_->Fill();
-    Clear();
+    float dR_genBs = v1.DeltaR(v2);
+    //std::cout<<"dR_genBs: "<<dR_genBs<<std::endl;
+    TLorentzVector diB = v1 + v2;
+
+    edm::View<pat::Jet>::const_iterator jet;
+    pat::Jet matchedJet;
+    float deltar = 0.4;
+    for(jet = jets.begin(); jet != jets.end(); ++jet){
+      if(reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi()) < deltar){
+        deltar = reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi());
+        matchedJet = *jet;
+      }
+      //std::cout<<"deltar: "<<deltar<<std::endl;
+    }
+    //std::cout<<"matchedJet: "<<matchedJet.pt()<<"\t"<<matchedJet.eta()<<"\t"<<matchedJet.phi()<<std::endl;
+
+    // select signal events where bi-b system is boosted and match to a reco jet
+    if(dR_genBs < 0.8 && matchedJet.pt() > 20.){
+      deltar = 0.4;
+      for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
+        if(reco::deltaR(matchedJet, *genjet) < deltar){
+          deltar = reco::deltaR(matchedJet, *genjet);
+          jet_genmatch_pt = genjet->pt();
+          jet_genmatch_eta = genjet->eta();
+          jet_genmatch_phi = genjet->phi();
+          jet_genmatch_mass = genjet->mass();
+        }
+      }
+
+      // find SVs associated with the jet
+      std::vector<const reco::VertexCompositePtrCandidate *> jetSVs;
+      for(const auto &sv : *svHandle){
+        if(reco::deltaR(matchedJet, sv) < 0.4){
+          jetSVs.push_back(&sv);
+        }
+      }
+
+      // sort by dxy significance
+      std::sort(jetSVs.begin(), jetSVs.end(), [&](const reco::VertexCompositePtrCandidate *sva, const reco::VertexCompositePtrCandidate *svb) { return btagbtvdeep::sv_vertex_comparator(*sva, *svb, *pv); });
+      nsv = jetSVs.size();
+      float etasign = matchedJet.eta() > 0 ? 1 : -1;
+
+      // build trackinfo
+      math::XYZVector jet_dir = matchedJet.momentum().Unit();
+      GlobalVector jet_ref_track_dir(matchedJet.px(), matchedJet.py(), matchedJet.pz());
+
+      // fill associated secondary vertices information
+      for (const auto *jetsv : jetSVs) {
+        jet_sv_pt.push_back(jetsv->pt());
+        jet_sv_pt_log.push_back(std::log(jetsv->pt()));
+        jet_sv_ptrel.push_back(jetsv->pt() / matchedJet.pt());
+        jet_sv_ptrel_log.push_back(std::log(jetsv->pt() / matchedJet.pt()));
+        jet_sv_eta.push_back(jetsv->eta());
+        jet_sv_phi.push_back(jetsv->phi());
+        jet_sv_mass.push_back(jetsv->mass());
+        jet_sv_energy.push_back(jetsv->energy());
+        jet_sv_energy_log.push_back(std::log(jetsv->energy()));
+        jet_sv_erel.push_back(jetsv->energy() / matchedJet.energy());
+        jet_sv_erel_log.push_back(std::log(jetsv->energy() / matchedJet.energy()));
+        jet_sv_deta.push_back(etasign * (jetsv->eta() - matchedJet.eta()));
+        jet_sv_dphi.push_back(reco::deltaPhi(*jetsv, matchedJet));
+        jet_sv_chi2.push_back(jetsv->vertexChi2());
+        const auto &dxy = btagbtvdeep::vertexDxy(*jetsv, *pv);
+        jet_sv_dxy.push_back(dxy.value());
+        jet_sv_dxysig.push_back(dxy.significance());
+        const auto &d3d = btagbtvdeep::vertexD3d(*jetsv, *pv);
+        jet_sv_d3d.push_back(d3d.value());
+        jet_sv_d3dsig.push_back(d3d.significance());
+        jet_sv_ntrack.push_back(jetsv->numberOfDaughters());
+      }
+
+      jet_pt = matchedJet.pt();
+      jet_eta = matchedJet.eta();
+      jet_phi = matchedJet.phi();
+      jet_mass = matchedJet.mass();
+      jet_ncand = matchedJet.neutralMultiplicity() + matchedJet.chargedMultiplicity();
+      jet_nel = matchedJet.electronMultiplicity();
+      jet_nmu = matchedJet.muonMultiplicity();
+      jet_nbhad = matchedJet.jetFlavourInfo().getbHadrons().size();
+      jet_nchad = matchedJet.jetFlavourInfo().getcHadrons().size();
+      jet_hflav = matchedJet.jetFlavourInfo().getHadronFlavour();
+      jet_pflav = matchedJet.jetFlavourInfo().getPartonFlavour();
+      jet_lepflav = matchedJet.jetFlavourInfo().getLeptons().size();
+      jet_deepcsv_probb = matchedJet.bDiscriminator("pfDeepCSVJetTags:probb");
+      jet_deepcsv_probc = matchedJet.bDiscriminator("pfDeepCSVJetTags:probc");
+      jet_deepcsv_probudsg = matchedJet.bDiscriminator("pfDeepCSVJetTags:probudsg");
+      jet_deepjet_probb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probb");
+      jet_deepjet_probc = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probc");
+      jet_deepjet_probuds = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probuds");
+      jet_deepjet_probg = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probg");
+      jet_deepjet_probbb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probbb");
+      jet_deepjet_problepb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:problepb");
+
+      // fill clustered particles information
+      int nConstituents = matchedJet.numberOfSourceCandidatePtrs();
+      for(int k = 0; k < nConstituents; k++){
+        reco::CandidatePtr pfcand = matchedJet.sourceCandidatePtr(k);
+        const auto *packed_cand = dynamic_cast<const pat::PackedCandidate *>(&(*pfcand)); 
+        jet_pfcand_px.push_back(packed_cand->px());
+        jet_pfcand_py.push_back(packed_cand->py());
+        jet_pfcand_pz.push_back(packed_cand->pz());
+        jet_pfcand_energy.push_back(packed_cand->energy());
+        jet_pfcand_pt.push_back(packed_cand->pt());
+        jet_pfcand_pt_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->pt()), -99));
+        jet_pfcand_e_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->energy()), -99));
+        jet_pfcand_phirel.push_back(reco::deltaPhi(*packed_cand, matchedJet));
+        jet_pfcand_etarel.push_back(etasign * (packed_cand->eta() - matchedJet.eta()));
+        jet_pfcand_abseta.push_back(std::abs(packed_cand->eta()));
+        jet_pfcand_puppiw.push_back(packed_cand->puppiWeight());
+        jet_pfcand_charge.push_back(packed_cand->charge());
+        jet_pfcand_isEl.push_back(std::abs(packed_cand->pdgId()) == 11);
+        jet_pfcand_isMu.push_back(std::abs(packed_cand->pdgId()) == 13);
+        jet_pfcand_isChargedHad.push_back(std::abs(packed_cand->pdgId()) == 211);
+        jet_pfcand_isGamma.push_back(std::abs(packed_cand->pdgId()) == 22);
+        jet_pfcand_isNeutralHad.push_back(std::abs(packed_cand->pdgId()) == 130);
+
+        // for neutral
+        float hcal_fraction = 0.;
+        if (packed_cand->pdgId() == 1 || packed_cand->pdgId() == 130) {
+          hcal_fraction = packed_cand->hcalFraction();
+        }
+        else if (packed_cand->isIsolatedChargedHadron()) {
+          hcal_fraction = packed_cand->rawHcalFraction();
+        }
+        jet_pfcand_hcalFrac.push_back(hcal_fraction);
+        jet_pfcand_hcalFracCalib.push_back(packed_cand->hcalFraction());
+
+        // for charged
+        jet_pfcand_VTX_ass.push_back(packed_cand->pvAssociationQuality());
+        jet_pfcand_fromPV.push_back(packed_cand->fromPV());
+        jet_pfcand_lostInnerHits.push_back(packed_cand->lostInnerHits());
+        jet_pfcand_trackHighPurity.push_back(packed_cand->trackHighPurity());
+
+        // impact parameters
+        jet_pfcand_dz.push_back(btagbtvdeep::catch_infs(packed_cand->dz()));
+        jet_pfcand_dzsig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dz() / packed_cand->dzError()) : 0);
+        jet_pfcand_dxy.push_back(btagbtvdeep::catch_infs(packed_cand->dxy()));
+        jet_pfcand_dxysig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dxy() / packed_cand->dxyError()) : 0);
+
+        // track info
+        if (packed_cand->bestTrack()) {
+          const auto* trk = packed_cand->bestTrack();
+          jet_pfcand_normchi2.push_back(btagbtvdeep::catch_infs(trk->normalizedChi2()));
+          jet_pfcand_quality.push_back(trk->qualityMask());
+
+          trackinfo.buildTrackInfo(&(*pfcand), jet_dir, jet_ref_track_dir, *pv);
+          jet_pfcand_btagEtaRel.push_back(trackinfo.getTrackEtaRel());
+          jet_pfcand_btagPtRatio.push_back(trackinfo.getTrackPtRatio());
+          jet_pfcand_btagPParRatio.push_back(trackinfo.getTrackPParRatio());
+          jet_pfcand_btagSip2dVal.push_back(trackinfo.getTrackSip2dVal());
+          jet_pfcand_btagSip2dSig.push_back(trackinfo.getTrackSip2dSig());
+          jet_pfcand_btagSip3dVal.push_back(trackinfo.getTrackSip3dVal());
+          jet_pfcand_btagSip3dSig.push_back(trackinfo.getTrackSip3dSig());
+          jet_pfcand_btagJetDistVal.push_back(trackinfo.getTrackJetDistVal());
+        }
+        else {
+          jet_pfcand_normchi2.push_back(999);
+          jet_pfcand_quality.push_back(0);
+          jet_pfcand_btagEtaRel.push_back(0);
+          jet_pfcand_btagPtRatio.push_back(0);
+          jet_pfcand_btagPParRatio.push_back(0);
+          jet_pfcand_btagSip2dVal.push_back(0);
+          jet_pfcand_btagSip2dSig.push_back(0);
+          jet_pfcand_btagSip3dVal.push_back(0);
+          jet_pfcand_btagSip3dSig.push_back(0);
+          jet_pfcand_btagJetDistVal.push_back(0);
+        }
+      }
+      if(debug_)    std::cout<<"filling jet info"<<std::endl;
+      tree_->Fill();
+      Clear();
+    }
   }
 
   /////// background jets ///////
- /*
-  edm::View<pat::Jet>::const_iterator jet;
-  for(jet = jets.begin(); jet != jets.end(); ++jet){
-    if(!(dR_genBs < 0.8 && jet->pt() > 20.)) continue;
-    float deltar = 0.4;
-    for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
-      if(reco::deltaR(*jet, *genjet) < deltar){
-        deltar = reco::deltaR(*jet, *genjet);
-        jet_genmatch_pt = genjet->pt();
-        jet_genmatch_eta = genjet->eta();
-        jet_genmatch_phi = genjet->phi();
-        jet_genmatch_mass = genjet->mass();
+  if(!isSignal_){
+
+    edm::View<pat::Jet>::const_iterator jet;
+    for(jet = jets.begin(); jet != jets.end(); ++jet){
+      if(jet->pt() > 20.) continue;
+      float deltar = 0.4;
+      for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
+        if(reco::deltaR(*jet, *genjet) < deltar){
+          deltar = reco::deltaR(*jet, *genjet);
+          jet_genmatch_pt = genjet->pt();
+          jet_genmatch_eta = genjet->eta();
+          jet_genmatch_phi = genjet->phi();
+          jet_genmatch_mass = genjet->mass();
+        }
       }
-    }
-    jet_pt = jet->pt();
-    jet_eta = jet->eta();
-    jet_phi = jet->phi();
-    jet_mass = jet->mass();
-    jet_ncand = jet->neutralMultiplicity() + jet->chargedMultiplicity();
-    jet_nel = jet->electronMultiplicity();
-    jet_nmu = jet->muonMultiplicity();
-    jet_nbhad = jet->jetFlavourInfo().getbHadrons().size();
-    jet_nchad = jet->jetFlavourInfo().getcHadrons().size();
-    jet_hflav = jet->jetFlavourInfo().getHadronFlavour(); 
-    jet_pflav = jet->jetFlavourInfo().getPartonFlavour();
-    jet_lepflav = jet->jetFlavourInfo().getLeptons().size();
-    jet_deepcsv_probb = matchedJet.bDiscriminator("pfDeepCSVJetTags:probb");
-    jet_deepcsv_probc = matchedJet.bDiscriminator("pfDeepCSVJetTags:probc");
-    jet_deepcsv_probudsg = matchedJet.bDiscriminator("pfDeepCSVJetTags:probudsg");
-    jet_deepjet_probb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probb");
-    jet_deepjet_probc = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probc");
-    jet_deepjet_probuds = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probuds");
-    jet_deepjet_probg = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probg");
-    jet_deepjet_probbb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probbb");
-    jet_deepjet_problepb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:problepb");
+      // find SVs associated with the jet
+      std::vector<const reco::VertexCompositePtrCandidate *> jetSVs;
+      for(const auto &sv : *svHandle){
+        if(reco::deltaR(*jet, sv) < 0.4){
+          jetSVs.push_back(&sv);
+        }
+      }
 
-    //jet_elflav = 0; jet_muflav = 0; jet_tauflav = 0;
-    //const reco::GenParticleRefVector& leptons = jet->jetFlavourInfo().getLeptons();
-    //std::cout << "                      # of clustered leptons: " << leptons.size() << std::endl;
-    //for (reco::GenParticleRefVector::const_iterator it = leptons.begin(); it != leptons.end(); ++it) {
-    //    std::cout<<"inside loop"<<std::endl;
-    //    std::cout<<(*it)->pdgId()<<std::endl;
-    //  if(abs((*it)->pdgId() == 11)) jet_elflav++;
-    //  if(abs((*it)->pdgId() == 13)) jet_muflav++;
-    //  if(abs((*it)->pdgId() == 15)) jet_tauflav++;
-    //}
-    //std::cout << "jet_elflav: "<<jet_elflav<<"\t"<<"jet_muflav: "<<jet_muflav<<"\t"<<"jet_tauflav: "<<jet_tauflav<<std::endl;
+      // sort by dxy significance
+      std::sort(jetSVs.begin(), jetSVs.end(), [&](const reco::VertexCompositePtrCandidate *sva, const reco::VertexCompositePtrCandidate *svb) { return btagbtvdeep::sv_vertex_comparator(*sva, *svb, *pv); });
+      nsv = jetSVs.size();
+      float etasign = jet->eta() > 0 ? 1 : -1;
 
-    int nConstituents = jet->numberOfSourceCandidatePtrs();
-    for(int k = 0; k < nConstituents; k++){
-      reco::CandidatePtr pfcand = jet->sourceCandidatePtr(k);
-      jet_pfcand_pt.push_back(pfcand->pt());
-      jet_pfcand_eta.push_back(pfcand->eta());
-      jet_pfcand_phi.push_back(pfcand->phi());
-    }
-    
-    if(debug_)    std::cout<<"filling jet info"<<std::endl;
-    tree_->Fill();
-    Clear();
-  }//end of for loop
-  */
+      // build trackinfo
+      math::XYZVector jet_dir = jet->momentum().Unit();
+      GlobalVector jet_ref_track_dir(jet->px(), jet->py(), jet->pz());
+
+      // fill associated secondary vertices information
+      for (const auto *jetsv : jetSVs) {
+        jet_sv_pt.push_back(jetsv->pt());
+        jet_sv_pt_log.push_back(std::log(jetsv->pt()));
+        jet_sv_ptrel.push_back(jetsv->pt() / jet->pt());
+        jet_sv_ptrel_log.push_back(std::log(jetsv->pt() / jet->pt()));
+        jet_sv_eta.push_back(jetsv->eta());
+        jet_sv_phi.push_back(jetsv->phi());
+        jet_sv_mass.push_back(jetsv->mass());
+        jet_sv_energy.push_back(jetsv->energy());
+        jet_sv_energy_log.push_back(std::log(jetsv->energy()));
+        jet_sv_erel.push_back(jetsv->energy() / jet->energy());
+        jet_sv_erel_log.push_back(std::log(jetsv->energy() / jet->energy()));
+        jet_sv_deta.push_back(etasign * (jetsv->eta() - jet->eta()));
+        jet_sv_dphi.push_back(reco::deltaPhi(*jetsv, *jet));
+        jet_sv_chi2.push_back(jetsv->vertexChi2());
+        const auto &dxy = btagbtvdeep::vertexDxy(*jetsv, *pv);
+        jet_sv_dxy.push_back(dxy.value());
+        jet_sv_dxysig.push_back(dxy.significance());
+        const auto &d3d = btagbtvdeep::vertexD3d(*jetsv, *pv);
+        jet_sv_d3d.push_back(d3d.value());
+        jet_sv_d3dsig.push_back(d3d.significance());
+        jet_sv_ntrack.push_back(jetsv->numberOfDaughters());
+      }
+
+      jet_pt = jet->pt();
+      jet_eta = jet->eta();
+      jet_phi = jet->phi();
+      jet_mass = jet->mass();
+      jet_ncand = jet->neutralMultiplicity() + jet->chargedMultiplicity();
+      jet_nel = jet->electronMultiplicity();
+      jet_nmu = jet->muonMultiplicity();
+      jet_nbhad = jet->jetFlavourInfo().getbHadrons().size();
+      jet_nchad = jet->jetFlavourInfo().getcHadrons().size();
+      jet_hflav = jet->jetFlavourInfo().getHadronFlavour(); 
+      jet_pflav = jet->jetFlavourInfo().getPartonFlavour();
+      jet_lepflav = jet->jetFlavourInfo().getLeptons().size();
+      jet_deepcsv_probb = jet->bDiscriminator("pfDeepCSVJetTags:probb");
+      jet_deepcsv_probc = jet->bDiscriminator("pfDeepCSVJetTags:probc");
+      jet_deepcsv_probudsg = jet->bDiscriminator("pfDeepCSVJetTags:probudsg");
+      jet_deepjet_probb = jet->bDiscriminator("pfDeepFlavourJetTags:probb");
+      jet_deepjet_probc = jet->bDiscriminator("pfDeepFlavourJetTags:probc");
+      jet_deepjet_probuds = jet->bDiscriminator("pfDeepFlavourJetTags:probuds");
+      jet_deepjet_probg = jet->bDiscriminator("pfDeepFlavourJetTags:probg");
+      jet_deepjet_probbb = jet->bDiscriminator("pfDeepFlavourJetTags:probbb");
+      jet_deepjet_problepb = jet->bDiscriminator("pfDeepFlavourJetTags:problepb");
+
+      // fill clustered particles information
+      int nConstituents = jet->numberOfSourceCandidatePtrs();
+      for(int k = 0; k < nConstituents; k++){
+        reco::CandidatePtr pfcand = jet->sourceCandidatePtr(k);
+        const auto *packed_cand = dynamic_cast<const pat::PackedCandidate *>(&(*pfcand));
+        jet_pfcand_px.push_back(packed_cand->px());
+        jet_pfcand_py.push_back(packed_cand->py());
+        jet_pfcand_pz.push_back(packed_cand->pz());
+        jet_pfcand_energy.push_back(packed_cand->energy());
+        jet_pfcand_pt.push_back(packed_cand->pt());
+        jet_pfcand_pt_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->pt()), -99));
+        jet_pfcand_e_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->energy()), -99));
+        jet_pfcand_phirel.push_back(reco::deltaPhi(*packed_cand, *jet));
+        jet_pfcand_etarel.push_back(etasign * (packed_cand->eta() - jet->eta()));
+        jet_pfcand_abseta.push_back(std::abs(packed_cand->eta()));
+        jet_pfcand_puppiw.push_back(packed_cand->puppiWeight());
+        jet_pfcand_charge.push_back(packed_cand->charge());
+        jet_pfcand_isEl.push_back(std::abs(packed_cand->pdgId()) == 11);
+        jet_pfcand_isMu.push_back(std::abs(packed_cand->pdgId()) == 13);
+        jet_pfcand_isChargedHad.push_back(std::abs(packed_cand->pdgId()) == 211);
+        jet_pfcand_isGamma.push_back(std::abs(packed_cand->pdgId()) == 22);
+        jet_pfcand_isNeutralHad.push_back(std::abs(packed_cand->pdgId()) == 130);
+
+        // for neutral
+        float hcal_fraction = 0.;
+        if (packed_cand->pdgId() == 1 || packed_cand->pdgId() == 130) {
+          hcal_fraction = packed_cand->hcalFraction();
+        }
+        else if (packed_cand->isIsolatedChargedHadron()) {
+          hcal_fraction = packed_cand->rawHcalFraction();
+        }
+        jet_pfcand_hcalFrac.push_back(hcal_fraction);
+        jet_pfcand_hcalFracCalib.push_back(packed_cand->hcalFraction());
+
+        // for charged
+        jet_pfcand_VTX_ass.push_back(packed_cand->pvAssociationQuality());
+        jet_pfcand_fromPV.push_back(packed_cand->fromPV());
+        jet_pfcand_lostInnerHits.push_back(packed_cand->lostInnerHits());
+        jet_pfcand_trackHighPurity.push_back(packed_cand->trackHighPurity());
+
+        // impact parameters
+        jet_pfcand_dz.push_back(btagbtvdeep::catch_infs(packed_cand->dz()));
+        jet_pfcand_dzsig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dz() / packed_cand->dzError()) : 0);
+        jet_pfcand_dxy.push_back(btagbtvdeep::catch_infs(packed_cand->dxy()));
+        jet_pfcand_dxysig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dxy() / packed_cand->dxyError()) : 0);
+
+        // track info
+        if (packed_cand->bestTrack()) {
+          const auto* trk = packed_cand->bestTrack();
+          jet_pfcand_normchi2.push_back(btagbtvdeep::catch_infs(trk->normalizedChi2()));
+          jet_pfcand_quality.push_back(trk->qualityMask());
+
+          trackinfo.buildTrackInfo(&(*pfcand), jet_dir, jet_ref_track_dir, *pv);
+          jet_pfcand_btagEtaRel.push_back(trackinfo.getTrackEtaRel());
+          jet_pfcand_btagPtRatio.push_back(trackinfo.getTrackPtRatio());
+          jet_pfcand_btagPParRatio.push_back(trackinfo.getTrackPParRatio());
+          jet_pfcand_btagSip2dVal.push_back(trackinfo.getTrackSip2dVal());
+          jet_pfcand_btagSip2dSig.push_back(trackinfo.getTrackSip2dSig());
+          jet_pfcand_btagSip3dVal.push_back(trackinfo.getTrackSip3dVal());
+          jet_pfcand_btagSip3dSig.push_back(trackinfo.getTrackSip3dSig());
+          jet_pfcand_btagJetDistVal.push_back(trackinfo.getTrackJetDistVal());
+        }
+        else {
+          jet_pfcand_normchi2.push_back(999);
+          jet_pfcand_quality.push_back(0);
+          jet_pfcand_btagEtaRel.push_back(0);
+          jet_pfcand_btagPtRatio.push_back(0);
+          jet_pfcand_btagPParRatio.push_back(0);
+          jet_pfcand_btagSip2dVal.push_back(0);
+          jet_pfcand_btagSip2dSig.push_back(0);
+          jet_pfcand_btagSip3dVal.push_back(0);
+          jet_pfcand_btagSip3dSig.push_back(0);
+          jet_pfcand_btagJetDistVal.push_back(0);
+        }
+      }
+      if(debug_)    std::cout<<"filling jet info"<<std::endl;
+      tree_->Fill();
+      Clear();
+    } //end of for loop on jets
+  }
 
   if(debug_)    std::cout<<"got jet info"<<std::endl;
 }

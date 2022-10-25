@@ -48,6 +48,7 @@ class jetInfo : public baseTree{
   void Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, TrackInfoBuilder trackinfo);
   void SetBranches();
   void Clear();
+  bool isSignal_;
 
  private:
   jetInfo(){};
