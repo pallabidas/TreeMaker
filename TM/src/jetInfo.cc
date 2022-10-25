@@ -1,6 +1,7 @@
 #include "TreeMaker/TM/interface/jetInfo.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
 jetInfo::jetInfo(std::string name, TTree* tree, bool debug, const pset& iConfig):baseTree(name,tree,debug){
   if(debug) std::cout<<"in jet constructor"<<std::endl;
@@ -20,6 +21,8 @@ jetInfo::~jetInfo(){
 void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
   Clear();
   if(debug_)    std::cout<<"getting jet info"<<std::endl;
+
+  std::map<reco::CandidatePtr::key_type, float> puppi_wgt_cache;
 
   edm::Handle<edm::View<pat::Jet> > jetHandle;
   iEvent.getByLabel(jetLabel_, jetHandle);
@@ -111,7 +114,9 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
     // sort by dxy significance
     std::sort(jetSVs.begin(), jetSVs.end(), [&](const reco::VertexCompositePtrCandidate *sva, const reco::VertexCompositePtrCandidate *svb) { return btagbtvdeep::sv_vertex_comparator(*sva, *svb, *pv); });
     nsv = jetSVs.size();
-    const float etasign = matchedJet.eta() > 0 ? 1 : -1;
+    float etasign = matchedJet.eta() > 0 ? 1 : -1;
+
+    // fill associated secondar vertices information
     for (const auto *jetsv : jetSVs) {
       jet_sv_pt.push_back(jetsv->pt());
       jet_sv_pt_log.push_back(std::log(jetsv->pt()));
@@ -158,12 +163,79 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
     jet_deepjet_probbb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probbb");
     jet_deepjet_problepb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:problepb");
 
+    // fill clustered particles information
+
+    //for (const auto &dau : matchedJet.daughterPtrVector()) {
+    //
+    //}
+    //std::cout<<"nC: "<< matchedJet.daughterPtrVector().size()<<"\t"<<matchedJet.numberOfSourceCandidatePtrs()<<std::endl;
+
     int nConstituents = matchedJet.numberOfSourceCandidatePtrs();
     for(int k = 0; k < nConstituents; k++){
       reco::CandidatePtr pfcand = matchedJet.sourceCandidatePtr(k);
-      jet_pfcand_pt.push_back(pfcand->pt());
-      jet_pfcand_eta.push_back(pfcand->eta());
-      jet_pfcand_phi.push_back(pfcand->phi());
+      //jet_pfcand_pt.push_back(pfcand->pt());
+      //jet_pfcand_eta.push_back(pfcand->eta());
+      //jet_pfcand_phi.push_back(pfcand->phi());
+
+      const auto *packed_cand = dynamic_cast<const pat::PackedCandidate *>(&(*pfcand)); // from https://github.com/hqucms/DNNTuples/blob/prod/UL/10_6_X_MiniAODv2/Ntupler/src/PFCompleteFiller.cc
+      jet_pfcand_px.push_back(packed_cand->px());
+      jet_pfcand_py.push_back(packed_cand->py());
+      jet_pfcand_pz.push_back(packed_cand->pz());
+      jet_pfcand_energy.push_back(packed_cand->energy());
+      jet_pfcand_pt.push_back(packed_cand->pt());
+      jet_pfcand_pt_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->pt()), -99));
+      jet_pfcand_e_log.push_back(btagbtvdeep::catch_infs(std::log(packed_cand->energy()), -99));
+      jet_pfcand_phirel.push_back(reco::deltaPhi(*packed_cand, matchedJet));
+      jet_pfcand_etarel.push_back(etasign * (packed_cand->eta() - matchedJet.eta()));
+      jet_pfcand_abseta.push_back(std::abs(packed_cand->eta()));
+      jet_pfcand_puppiw.push_back(packed_cand->puppiWeight()); //FIXME
+      jet_pfcand_charge.push_back(packed_cand->charge());
+      jet_pfcand_isEl.push_back(std::abs(packed_cand->pdgId()) == 11);
+      jet_pfcand_isMu.push_back(std::abs(packed_cand->pdgId()) == 13);
+      jet_pfcand_isChargedHad.push_back(std::abs(packed_cand->pdgId()) == 211);
+      jet_pfcand_isGamma.push_back(std::abs(packed_cand->pdgId()) == 22);
+      jet_pfcand_isNeutralHad.push_back(std::abs(packed_cand->pdgId()) == 130);
+
+      // for neutral
+      float hcal_fraction = 0.;
+      if (packed_cand->pdgId() == 1 || packed_cand->pdgId() == 130) {
+        hcal_fraction = packed_cand->hcalFraction();
+      }
+      else if (packed_cand->isIsolatedChargedHadron()) {
+        hcal_fraction = packed_cand->rawHcalFraction();
+      }
+      jet_pfcand_hcalFrac.push_back(hcal_fraction);
+      jet_pfcand_hcalFracCalib.push_back(packed_cand->hcalFraction());
+
+      // for charged
+      jet_pfcand_VTX_ass.push_back(packed_cand->pvAssociationQuality());
+      jet_pfcand_fromPV.push_back(packed_cand->fromPV());
+      jet_pfcand_lostInnerHits.push_back(packed_cand->lostInnerHits());
+      jet_pfcand_trackHighPurity.push_back(packed_cand->trackHighPurity());
+
+      // impact parameters
+      jet_pfcand_dz.push_back(btagbtvdeep::catch_infs(packed_cand->dz()));
+      jet_pfcand_dzsig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dz() / packed_cand->dzError()) : 0);
+      jet_pfcand_dxy.push_back(btagbtvdeep::catch_infs(packed_cand->dxy()));
+      jet_pfcand_dxysig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dxy() / packed_cand->dxyError()) : 0);
+
+      if (packed_cand->bestTrack()) {
+        const auto* trk = packed_cand->bestTrack();
+        jet_pfcand_normchi2.push_back(btagbtvdeep::catch_infs(trk->normalizedChi2()));
+        jet_pfcand_quality.push_back(trk->qualityMask());
+      }
+      else {
+        jet_pfcand_normchi2.push_back(999);
+        jet_pfcand_quality.push_back(0);
+      }
+
+
+      //const auto *reco_cand = dynamic_cast<const reco::PFCandidate *>(&(*pfcand));
+      //if (not packed_cand and not reco_cand) throw edm::Exception(edm::errors::InvalidReference) << "Cannot convert to either reco::PFCandidate or pat::PackedCandidate";
+      //if(packed_cand){
+      //}
+      //else if(reco_cand){
+      //}
     }
     if(debug_)    std::cout<<"filling jet info"<<std::endl;
     tree_->Fill();
@@ -287,9 +359,35 @@ void jetInfo::SetBranches(){
   AddBranch(&jet_sv_chi2, "jet_sv_chi2");
   AddBranch(&jet_sv_dxy, "jet_sv_dxy");
 
-  AddBranch(&jet_pfcand_pt , "jet_pfcand_pt");
-  AddBranch(&jet_pfcand_eta , "jet_pfcand_eta");
-  AddBranch(&jet_pfcand_phi , "jet_pfcand_phi");
+  AddBranch(&jet_pfcand_px , "jet_pfcand_px");
+  AddBranch(&jet_pfcand_py , "jet_pfcand_py");
+  AddBranch(&jet_pfcand_pz , "jet_pfcand_pz");
+  AddBranch(&jet_pfcand_energy, "jet_pfcand_energy");
+  AddBranch(&jet_pfcand_pt, "jet_pfcand_pt");
+  AddBranch(&jet_pfcand_pt_log, "jet_pfcand_pt_log");
+  AddBranch(&jet_pfcand_e_log, "jet_pfcand_e_log");
+  AddBranch(&jet_pfcand_phirel, "jet_pfcand_phirel");
+  AddBranch(&jet_pfcand_etarel, "jet_pfcand_etarel");
+  AddBranch(&jet_pfcand_abseta, "jet_pfcand_abseta");
+  AddBranch(&jet_pfcand_puppiw, "jet_pfcand_puppiw");
+  AddBranch(&jet_pfcand_charge, "jet_pfcand_charge");
+  AddBranch(&jet_pfcand_isEl, "jet_pfcand_isEl");
+  AddBranch(&jet_pfcand_isMu, "jet_pfcand_isMu");
+  AddBranch(&jet_pfcand_isChargedHad, "jet_pfcand_isChargedHad");
+  AddBranch(&jet_pfcand_isGamma, "jet_pfcand_isGamma");
+  AddBranch(&jet_pfcand_isNeutralHad, "jet_pfcand_isNeutralHad");
+  AddBranch(&jet_pfcand_hcalFrac, "jet_pfcand_hcalFrac");
+  AddBranch(&jet_pfcand_hcalFracCalib, "jet_pfcand_hcalFracCalib");
+  AddBranch(&jet_pfcand_VTX_ass, "jet_pfcand_VTX_ass");
+  AddBranch(&jet_pfcand_fromPV, "jet_pfcand_fromPV");
+  AddBranch(&jet_pfcand_lostInnerHits, "jet_pfcand_lostInnerHits");
+  AddBranch(&jet_pfcand_trackHighPurity, "jet_pfcand_trackHighPurity");
+  AddBranch(&jet_pfcand_dz, "jet_pfcand_dz");
+  AddBranch(&jet_pfcand_dzsig, "jet_pfcand_dzsig");
+  AddBranch(&jet_pfcand_dxy, "jet_pfcand_dxy");
+  AddBranch(&jet_pfcand_dxysig, "jet_pfcand_dxysig");
+  AddBranch(&jet_pfcand_normchi2, "jet_pfcand_normchi2");
+  AddBranch(&jet_pfcand_quality, "jet_pfcand_quality");
 
   if(debug_)    std::cout<<"set branches"<<std::endl;
 }
@@ -343,9 +441,35 @@ void jetInfo::Clear(){
   jet_sv_d3dsig.clear();
   jet_sv_ntrack.clear();
 
+  jet_pfcand_px.clear();
+  jet_pfcand_py.clear();
+  jet_pfcand_pz.clear();
+  jet_pfcand_energy.clear();
   jet_pfcand_pt.clear();
-  jet_pfcand_eta.clear();
-  jet_pfcand_phi.clear();
-  
+  jet_pfcand_pt_log.clear();
+  jet_pfcand_e_log.clear();
+  jet_pfcand_phirel.clear();
+  jet_pfcand_etarel.clear();
+  jet_pfcand_abseta.clear();
+  jet_pfcand_puppiw.clear();
+  jet_pfcand_charge.clear();
+  jet_pfcand_isEl.clear();
+  jet_pfcand_isMu.clear();
+  jet_pfcand_isChargedHad.clear();
+  jet_pfcand_isGamma.clear();
+  jet_pfcand_isNeutralHad.clear();
+  jet_pfcand_hcalFrac.clear();
+  jet_pfcand_hcalFracCalib.clear();
+  jet_pfcand_VTX_ass.clear();
+  jet_pfcand_fromPV.clear();
+  jet_pfcand_lostInnerHits.clear();
+  jet_pfcand_trackHighPurity.clear();
+  jet_pfcand_dz.clear();
+  jet_pfcand_dzsig.clear();
+  jet_pfcand_dxy.clear();
+  jet_pfcand_dxysig.clear();
+  jet_pfcand_normchi2.clear();
+  jet_pfcand_quality.clear();
+
   if(debug_) std::cout<<"cleared"<<std::endl;
 }

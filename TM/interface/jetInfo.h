@@ -109,63 +109,43 @@ class jetInfo : public baseTree{
   std::vector<float> jet_sv_d3dsig;
   std::vector<float> jet_sv_ntrack;
 
-  std::vector<float> jet_pfcand_pt;
-  std::vector<float> jet_pfcand_eta;
-  std::vector<float> jet_pfcand_phi;
-/*  std::vector<float> jet_pfcand_mass;
+  std::vector<float> jet_pfcand_px;
+  std::vector<float> jet_pfcand_py;
+  std::vector<float> jet_pfcand_pz;
   std::vector<float> jet_pfcand_energy;
+  std::vector<float> jet_pfcand_pt;
   std::vector<float> jet_pfcand_pt_log;
-  std::vector<float> jet_pfcand_energy_log;
-  std::vector<float> jet_pfcand_calofraction;
-  std::vector<float> jet_pfcand_hcalfraction;
-  std::vector<float> jet_pfcand_dxy;
-  std::vector<float> jet_pfcand_dxysig;
+  std::vector<float> jet_pfcand_e_log;
+  std::vector<float> jet_pfcand_phirel;
+  std::vector<float> jet_pfcand_etarel;
+  std::vector<float> jet_pfcand_abseta;
+  std::vector<float> jet_pfcand_puppiw;
+  std::vector<float> jet_pfcand_charge;
+  std::vector<float> jet_pfcand_isEl;
+  std::vector<float> jet_pfcand_isMu;
+  std::vector<float> jet_pfcand_isChargedHad;
+  std::vector<float> jet_pfcand_isGamma;
+  std::vector<float> jet_pfcand_isNeutralHad;
+  std::vector<float> jet_pfcand_hcalFrac;
+  std::vector<float> jet_pfcand_hcalFracCalib;
+  std::vector<float> jet_pfcand_VTX_ass;
+  std::vector<float> jet_pfcand_fromPV;
+  std::vector<float> jet_pfcand_lostInnerHits;
+  std::vector<float> jet_pfcand_trackHighPurity;
   std::vector<float> jet_pfcand_dz;
   std::vector<float> jet_pfcand_dzsig;
-  std::vector<float> jet_pfcand_pperp_ratio;
-  std::vector<float> jet_pfcand_ppara_ratio;
-  std::vector<float> jet_pfcand_deta;
-  std::vector<float> jet_pfcand_dphi;
-  std::vector<float> jet_pfcand_etarel;
-  std::vector<float> jet_pfcand_puppiw;
-  std::vector<float> jet_pfcand_npixhits;
-  std::vector<float> jet_pfcand_nstriphits;
-  std::vector<float> jet_pfcand_frompv;
-  std::vector<float> jet_pfcand_id;
-  std::vector<float> jet_pfcand_track_qual;
-  std::vector<float> jet_pfcand_track_chi2;
-  std::vector<float> jet_pfcand_highpurity;
-  std::vector<float> jet_pfcand_nlostinnerhits;
-  std::vector<float> jet_pfcand_charge;
-  std::vector<float> jet_pfcand_tau_signal;
-  std::vector<float> jet_pfcand_muon_id;
-  std::vector<float> jet_pfcand_electron_eOverP;
-  std::vector<float> jet_pfcand_electron_detaIn;
-  std::vector<float> jet_pfcand_electron_dphiIn;
-  std::vector<float> jet_pfcand_electron_r9;
-  std::vector<float> jet_pfcand_electron_sigIetaIeta;
-  std::vector<float> jet_pfcand_electron_convProb;
-  std::vector<float> jet_pfcand_electron_fbrem;
-  std::vector<float> jet_pfcand_trackjet_d3d;
-  std::vector<float> jet_pfcand_trackjet_d3dsig;
-  std::vector<float> jet_pfcand_trackjet_dist
-  std::vector<float> jet_pfcand_trackjet_decayL;
-
-  std::vector<float> jet_pfcand_ptrel;
-  std::vector<float> jet_pfcand_phirel;
-  std::vector<float> jet_pfcand_pt_log_nopuppi;
-  std::vector<float> jet_pfcand_e_log_nopuppi;
-  std::vector<float> jet_pfcand_VTX_ass;
-  std::vector<float> jet_pfcand_lostInnerHits;
+  std::vector<float> jet_pfcand_dxy;
+  std::vector<float> jet_pfcand_dxysig;
   std::vector<float> jet_pfcand_normchi2;
   std::vector<float> jet_pfcand_quality;
-  std::vector<float> jet_pfcand_btagEtaRel;
-  std::vector<float> jet_pfcand_btagPtRatio;
-  std::vector<float> jet_pfcand_btagPParRatio;
-  std::vector<float> jet_pfcand_btagSip3dVal;
-  std::vector<float> jet_pfcand_btagSip3dSig;
-  std::vector<float> jet_pfcand_btagJetDistVal;
-*/
+
+  //std::vector<float> jet_pfcand_btagEtaRel;
+  //std::vector<float> jet_pfcand_btagPtRatio;
+  //std::vector<float> jet_pfcand_btagPParRatio;
+  //std::vector<float> jet_pfcand_btagSip3dVal;
+  //std::vector<float> jet_pfcand_btagSip3dSig;
+  //std::vector<float> jet_pfcand_btagJetDistVal;
+
 };
 
 #endif
