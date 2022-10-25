@@ -26,6 +26,17 @@
 #include "DataFormats/Candidate/interface/VertexCompositePtrCandidate.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/Measurement1D.h"
 #include "RecoBTag/FeatureTools/interface/deep_helpers.h"
+#include "RecoBTag/FeatureTools/interface/TrackInfoBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+
+//#include "FWCore/Framework/interface/ConsumesCollector.h"
+//#include "FWCore/Framework/interface/Frameworkfwd.h"
+//#include "FWCore/Framework/interface/one/EDAnalyzer.h"
+//#include "FWCore/Framework/interface/Event.h"
+//#include "FWCore/Framework/interface/MakerMacros.h"
+//#include "FWCore/ParameterSet/interface/ParameterSet.h"
+//#include "FWCore/Framework/interface/ConsumesCollector.h"
+//#include "FWCore/Framework/interface/EventSetup.h"
 
 using namespace btagbtvdeep;
 
@@ -34,7 +45,7 @@ class jetInfo : public baseTree{
  public:
   jetInfo(std::string name, TTree* tree, bool debug, const edm::ParameterSet& cfg);
   ~jetInfo();
-  void Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, TrackInfoBuilder trackinfo);
   void SetBranches();
   void Clear();
 
@@ -45,6 +56,8 @@ class jetInfo : public baseTree{
   edm::InputTag genjetLabel_;
   edm::InputTag vtxLabel_;
   edm::InputTag svLabel_;
+
+  //edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> track_builder_token_;
 
   float jet_pt;
   float jet_eta;
@@ -138,13 +151,14 @@ class jetInfo : public baseTree{
   std::vector<float> jet_pfcand_dxysig;
   std::vector<float> jet_pfcand_normchi2;
   std::vector<float> jet_pfcand_quality;
-
-  //std::vector<float> jet_pfcand_btagEtaRel;
-  //std::vector<float> jet_pfcand_btagPtRatio;
-  //std::vector<float> jet_pfcand_btagPParRatio;
-  //std::vector<float> jet_pfcand_btagSip3dVal;
-  //std::vector<float> jet_pfcand_btagSip3dSig;
-  //std::vector<float> jet_pfcand_btagJetDistVal;
+  std::vector<float> jet_pfcand_btagEtaRel;
+  std::vector<float> jet_pfcand_btagPtRatio;
+  std::vector<float> jet_pfcand_btagPParRatio;
+  std::vector<float> jet_pfcand_btagSip2dVal;
+  std::vector<float> jet_pfcand_btagSip2dSig;
+  std::vector<float> jet_pfcand_btagSip3dVal;
+  std::vector<float> jet_pfcand_btagSip3dSig;
+  std::vector<float> jet_pfcand_btagJetDistVal;
 
 };
 

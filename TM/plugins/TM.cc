@@ -36,6 +36,7 @@ TM::TM(const edm::ParameterSet& iConfig):
   puppimetToken = consumes<edm::View<pat::MET>>(iConfig.getUntrackedParameter<edm::InputTag>("puppimetLabel_"));
   pfjetToken = consumes<edm::View<pat::Jet>>(iConfig.getUntrackedParameter<edm::InputTag>("pfjetLabel_"));
   jetToken = consumes<edm::View<pat::Jet>>(iConfig.getUntrackedParameter<edm::InputTag>("jetLabel_"));
+  track_builder_token_ = esConsumes<TransientTrackBuilder, TransientTrackRecord>(edm::ESInputTag("", "TransientTrackBuilder"));
   //jecToken = consumes<JetCorrectorParametersCollection>(iConfig.getUntrackedParameter<edm::InputTag>("jetCorrectorLabel_")); //getParameter<std::string>
   phoToken = consumes<edm::View<pat::Photon>>(iConfig.getUntrackedParameter<edm::InputTag>("photonLabel_"));
   TRToken = consumes<edm::TriggerResults>(iConfig.getUntrackedParameter<edm::InputTag>("HLTriggerResults_"));
@@ -102,6 +103,9 @@ TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
     rhoLepton = *(rhoLeptonHandle.product());
   }
 
+  trackBuilder_ = iSetup.getHandle(track_builder_token_);
+  TrackInfoBuilder trackinfo(trackBuilder_);
+
   if( filleventInfo_)       eventInfo_      ->Fill(iEvent);
   if( fillgenparticleInfo_) genparticleInfo_->Fill(iEvent);
   if( fillpileUpInfo_)      pileUpInfo_     ->Fill(iEvent);
@@ -113,7 +117,7 @@ TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   if( fillrhoInfo_)         rhoInfo_        ->Fill(iEvent);
   if( fillpfmetInfo_)       pfmetInfo_      ->Fill(iEvent);
   if( fillpfjetInfo_)       pfjetInfo_      ->Fill(iEvent, iSetup);
-  if( filljetInfo_)         jetInfo_        ->Fill(iEvent, iSetup);
+  if( filljetInfo_)         jetInfo_        ->Fill(iEvent, iSetup, trackinfo);
   if( filltauInfo_)         tauInfo_        ->Fill(iEvent, pv, vtx);
 
   //if(debug_) std::cout<<"Filling tree"<<std::endl;

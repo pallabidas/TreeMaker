@@ -1,3 +1,10 @@
+/*
+ * References:
+ * https://github.com/hqucms/DNNTuples/blob/prod/UL/10_6_X_MiniAODv2/Ntupler/src/PFCompleteFiller.cc
+ * https://github.com/cms-sw/cmssw/blob/master/RecoBTag/FeatureTools/plugins/DeepBoostedJetTagInfoProducer.cc
+ *
+ */
+
 #include "TreeMaker/TM/interface/jetInfo.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/Math/interface/deltaR.h"
@@ -18,7 +25,7 @@ jetInfo::~jetInfo(){
   delete tree_;
 }
 
-void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
+void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup,  TrackInfoBuilder trackinfo){
   Clear();
   if(debug_)    std::cout<<"getting jet info"<<std::endl;
 
@@ -116,6 +123,10 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
     nsv = jetSVs.size();
     float etasign = matchedJet.eta() > 0 ? 1 : -1;
 
+    // build trackinfo
+    math::XYZVector jet_dir = matchedJet.momentum().Unit();
+    GlobalVector jet_ref_track_dir(matchedJet.px(), matchedJet.py(), matchedJet.pz());
+
     // fill associated secondar vertices information
     for (const auto *jetsv : jetSVs) {
       jet_sv_pt.push_back(jetsv->pt());
@@ -173,10 +184,6 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
     int nConstituents = matchedJet.numberOfSourceCandidatePtrs();
     for(int k = 0; k < nConstituents; k++){
       reco::CandidatePtr pfcand = matchedJet.sourceCandidatePtr(k);
-      //jet_pfcand_pt.push_back(pfcand->pt());
-      //jet_pfcand_eta.push_back(pfcand->eta());
-      //jet_pfcand_phi.push_back(pfcand->phi());
-
       const auto *packed_cand = dynamic_cast<const pat::PackedCandidate *>(&(*pfcand)); // from https://github.com/hqucms/DNNTuples/blob/prod/UL/10_6_X_MiniAODv2/Ntupler/src/PFCompleteFiller.cc
       jet_pfcand_px.push_back(packed_cand->px());
       jet_pfcand_py.push_back(packed_cand->py());
@@ -188,7 +195,7 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
       jet_pfcand_phirel.push_back(reco::deltaPhi(*packed_cand, matchedJet));
       jet_pfcand_etarel.push_back(etasign * (packed_cand->eta() - matchedJet.eta()));
       jet_pfcand_abseta.push_back(std::abs(packed_cand->eta()));
-      jet_pfcand_puppiw.push_back(packed_cand->puppiWeight()); //FIXME
+      jet_pfcand_puppiw.push_back(packed_cand->puppiWeight());
       jet_pfcand_charge.push_back(packed_cand->charge());
       jet_pfcand_isEl.push_back(std::abs(packed_cand->pdgId()) == 11);
       jet_pfcand_isMu.push_back(std::abs(packed_cand->pdgId()) == 13);
@@ -219,23 +226,34 @@ void jetInfo::Fill(const edm::Event& iEvent,const  edm::EventSetup& iSetup){
       jet_pfcand_dxy.push_back(btagbtvdeep::catch_infs(packed_cand->dxy()));
       jet_pfcand_dxysig.push_back(packed_cand->bestTrack() ? btagbtvdeep::catch_infs(packed_cand->dxy() / packed_cand->dxyError()) : 0);
 
+      // track info
       if (packed_cand->bestTrack()) {
         const auto* trk = packed_cand->bestTrack();
         jet_pfcand_normchi2.push_back(btagbtvdeep::catch_infs(trk->normalizedChi2()));
         jet_pfcand_quality.push_back(trk->qualityMask());
+
+        trackinfo.buildTrackInfo(&(*pfcand), jet_dir, jet_ref_track_dir, *pv);
+        jet_pfcand_btagEtaRel.push_back(trackinfo.getTrackEtaRel());
+        jet_pfcand_btagPtRatio.push_back(trackinfo.getTrackPtRatio());
+        jet_pfcand_btagPParRatio.push_back(trackinfo.getTrackPParRatio());
+        jet_pfcand_btagSip2dVal.push_back(trackinfo.getTrackSip2dVal());
+        jet_pfcand_btagSip2dSig.push_back(trackinfo.getTrackSip2dSig());
+        jet_pfcand_btagSip3dVal.push_back(trackinfo.getTrackSip3dVal());
+        jet_pfcand_btagSip3dSig.push_back(trackinfo.getTrackSip3dSig());
+        jet_pfcand_btagJetDistVal.push_back(trackinfo.getTrackJetDistVal());
       }
       else {
         jet_pfcand_normchi2.push_back(999);
         jet_pfcand_quality.push_back(0);
+        jet_pfcand_btagEtaRel.push_back(0);
+        jet_pfcand_btagPtRatio.push_back(0);
+        jet_pfcand_btagPParRatio.push_back(0);
+        jet_pfcand_btagSip2dVal.push_back(0);
+        jet_pfcand_btagSip2dSig.push_back(0);
+        jet_pfcand_btagSip3dVal.push_back(0);
+        jet_pfcand_btagSip3dSig.push_back(0);
+        jet_pfcand_btagJetDistVal.push_back(0);
       }
-
-
-      //const auto *reco_cand = dynamic_cast<const reco::PFCandidate *>(&(*pfcand));
-      //if (not packed_cand and not reco_cand) throw edm::Exception(edm::errors::InvalidReference) << "Cannot convert to either reco::PFCandidate or pat::PackedCandidate";
-      //if(packed_cand){
-      //}
-      //else if(reco_cand){
-      //}
     }
     if(debug_)    std::cout<<"filling jet info"<<std::endl;
     tree_->Fill();
@@ -388,6 +406,14 @@ void jetInfo::SetBranches(){
   AddBranch(&jet_pfcand_dxysig, "jet_pfcand_dxysig");
   AddBranch(&jet_pfcand_normchi2, "jet_pfcand_normchi2");
   AddBranch(&jet_pfcand_quality, "jet_pfcand_quality");
+  AddBranch(&jet_pfcand_btagEtaRel, "jet_pfcand_btagEtaRel");
+  AddBranch(&jet_pfcand_btagPtRatio, "jet_pfcand_btagPtRatio");
+  AddBranch(&jet_pfcand_btagPParRatio, "jet_pfcand_btagPParRatio");
+  AddBranch(&jet_pfcand_btagSip2dVal, "jet_pfcand_btagSip2dVal");
+  AddBranch(&jet_pfcand_btagSip2dSig, "jet_pfcand_btagSip2dSig");
+  AddBranch(&jet_pfcand_btagSip3dVal, "jet_pfcand_btagSip3dVal");
+  AddBranch(&jet_pfcand_btagSip3dSig, "jet_pfcand_btagSip3dSig");
+  AddBranch(&jet_pfcand_btagJetDistVal, "jet_pfcand_btagJetDistVal");
 
   if(debug_)    std::cout<<"set branches"<<std::endl;
 }
@@ -470,6 +496,14 @@ void jetInfo::Clear(){
   jet_pfcand_dxysig.clear();
   jet_pfcand_normchi2.clear();
   jet_pfcand_quality.clear();
+  jet_pfcand_btagEtaRel.clear();
+  jet_pfcand_btagPtRatio.clear();
+  jet_pfcand_btagPParRatio.clear();
+  jet_pfcand_btagSip2dVal.clear();
+  jet_pfcand_btagSip2dSig.clear();
+  jet_pfcand_btagSip3dVal.clear();
+  jet_pfcand_btagSip3dSig.clear();
+  jet_pfcand_btagJetDistVal.clear();
 
   if(debug_) std::cout<<"cleared"<<std::endl;
 }

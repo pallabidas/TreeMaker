@@ -25,6 +25,8 @@
 #include "TreeMaker/TM/interface/tauInfo.h"
 #include "DataFormats/PatCandidates/interface/Tau.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
+#include "RecoBTag/FeatureTools/interface/TrackInfoBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
 
 #include "TROOT.h"
 #include "TTree.h"
@@ -88,6 +90,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       HLTPrescaleProvider hltPrescale_;
       std::string hltlabel_;
       std::vector<std::string> all_triggers;
+      edm::ESHandle<TransientTrackBuilder> trackBuilder_;
 
       edm::EDGetTokenT<reco::VertexCollection> vtxToken;
       edm::EDGetTokenT<std::vector<PileupSummaryInfo>>  puToken;
@@ -97,6 +100,7 @@ class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
       edm::EDGetTokenT<edm::View<pat::MET>> puppimetToken;
       edm::EDGetTokenT<edm::View<pat::Jet>> pfjetToken;
       edm::EDGetTokenT<edm::View<pat::Jet>> jetToken;
+      edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> track_builder_token_;
       //edm::EDGetTokenT<JetCorrectorParametersCollection> jecToken;
       edm::EDGetTokenT<edm::View<pat::Photon>> phoToken;
       edm::EDGetTokenT<edm::TriggerResults> TRToken;
