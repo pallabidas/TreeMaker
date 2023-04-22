@@ -13,7 +13,7 @@ triggerInfo::~triggerInfo(){
 }
 
 
-void triggerInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, std::vector<std::string>& all_triggers, HLTConfigProvider& hltConfig_, HLTPrescaleProvider& hltPrescale_, std::string& hltlabel_, const size_t& MaxN =200 ){
+void triggerInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, std::vector<std::string>& all_triggers, HLTConfigProvider& hltConfig_, HLTPrescaleProvider& hltPrescale_, std::string& hltlabel_){
 
   if(debug_)    std::cout<<"getting HL Trigger info"<<std::endl;
 
@@ -40,7 +40,8 @@ void triggerInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, 
   	if(idx[i] < hsize){
           all_triggernames.push_back(all_triggers[i]);
   	  all_ifTriggerpassed[i]=HLTR->accept(idx[i]);
-          all_triggerprescales[i] = hltPrescale_.prescaleValue( iEvent, iSetup, all_triggers[i]);
+          auto const prescaleVals = hltPrescale_.prescaleValuesInDetail<double>(iEvent, iSetup, all_triggers[i]);
+          all_triggerprescales[i] = prescaleVals.second;
  	}	
  	
   	if(debug_){

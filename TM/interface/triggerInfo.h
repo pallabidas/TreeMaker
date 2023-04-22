@@ -30,7 +30,7 @@ class triggerInfo : public baseTree{
   ~triggerInfo();
   void Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, 
 	    std::vector<std::string>& all_triggers, HLTConfigProvider& hltConfig_, HLTPrescaleProvider& hltPrescale_,
-	    std::string& hltlabel_, const size_t& MaxN );
+	    std::string& hltlabel_);
   void SetBranches();
   void Clear();
 

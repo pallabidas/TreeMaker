@@ -8,7 +8,6 @@
 #include "DataFormats/Common/interface/TriggerResults.h"
 
 TM::TM(const edm::ParameterSet& iConfig):
-  MaxN(200),
   hltPrescale_(iConfig, consumesCollector(), *this)
 {
   debug_                       = iConfig.getUntrackedParameter<bool>("debug_");
@@ -77,8 +76,8 @@ TM::~TM()
 {
 }
 
-void
-TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
+
+void TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   using namespace edm;
   edm::Handle<reco::VertexCollection> vtxHandle;
   iEvent.getByToken(vtxToken, vtxHandle);
@@ -109,7 +108,7 @@ TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   if( filleventInfo_)       eventInfo_      ->Fill(iEvent);
   if( fillgenparticleInfo_) genparticleInfo_->Fill(iEvent);
   if( fillpileUpInfo_)      pileUpInfo_     ->Fill(iEvent);
-  if( filltriggerInfo_)     triggerInfo_    ->Fill(iEvent, iSetup, all_triggers, hltConfig_, hltPrescale_, hltlabel_, MaxN);
+  if( filltriggerInfo_)     triggerInfo_    ->Fill(iEvent, iSetup, all_triggers, hltConfig_, hltPrescale_, hltlabel_);
   if( fillvertexInfo_)      vertexInfo_     ->Fill(iEvent);
   if( fillmuonInfo_)        muonInfo_       ->Fill(iEvent, pv, vtx, rhoLepton);
   if( fillPhotInfo_)        photonInfo_     ->Fill(iEvent, iSetup);
@@ -125,16 +124,6 @@ TM::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup){
   //if(debug_) std::cout<<"Filled tree"<<std::endl;
 }
 
-void
-TM::beginJob(){
-
-}
-
-void
-TM::endJob() {
-  //tree_->Print();
-}
-
 void TM::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
   if(debug_){
     cout<<"\n----------------------------------------------------------------------------------------------------------------"<<endl;
@@ -142,73 +131,78 @@ void TM::beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup){
     cout<<"BEGIN NEW RUN: "<<iRun.run()<<endl;
   }
   
-  cout<<"running"<<endl;
-
   bool changed(true);
-  if(hltPrescale_.init(iRun,iSetup,hltlabel_,changed)){
-    HLTConfigProvider const&  hltConfig_ = hltPrescale_.hltConfigProvider();
-    if(debug_) std::cout << "Initalizing HLTConfigProvider"  << std::endl;
-    if(changed){
-      if(debug_) cout<< "HLT config has changed wrt the previous Run"  << std::endl;
-      std::vector<std::string> photon_triggers_in_run;
-      photon_triggers_in_run.clear();
+
+  if (hltConfig_.init(iRun, iSetup, hltlabel_, changed)) {
+    // if init returns TRUE, initialisation has succeeded!
+    if (changed) {
+      // The HLT config has actually changed wrt the previous Run, hence rebook your
+      // histograms or do anything else dependent on the revised HLT config
+      if(debug_) std::cout << "Initalizing HLTConfigProvider"  << std::endl;
+      std::vector<std::string> triggers_in_run;
+      triggers_in_run.clear();
       if(debug_){
         cout<<" Trigger Table : "<<hltConfig_.tableName()<<endl;
       }
       unsigned int ntriggers = hltConfig_.size();
-      cout<<"  "<<ntriggers <<" Total HLT path in this run\t"<<endl; 
 
       // Loop over all available triggers
       for(unsigned int t=0;t<ntriggers;++t){
         std::string hltname(hltConfig_.triggerName(t));
-        //string string_search1 ("HLT_Photon30_R9Id90_HE10_IsoM_v"); //not in the trigger menu since 2017
-        string string_search1 ("HLT_Photon30_HoverELoose_v");
-        string string_search2 ("HLT_Photon50_R9Id90_HE10_IsoM_v");
-        string string_search3 ("HLT_Photon75_R9Id90_HE10_IsoM_v");
-        string string_search4 ("HLT_Photon90_R9Id90_HE10_IsoM_v");
-        string string_search5 ("HLT_Photon120_R9Id90_HE10_IsoM_v");
-	string string_search6 ("HLT_Photon165_R9Id90_HE10_IsoM_v");
+        string string_search1 ("HLT_Mu9_IP6");
         
         //search the trigger name for string_search. 
         size_t found1 = hltname.find(string_search1);
-        size_t found2 = hltname.find(string_search2);
-        size_t found3 = hltname.find(string_search3);
-	size_t found4 = hltname.find(string_search4);
-	size_t found5 = hltname.find(string_search5);
-	size_t found6 = hltname.find(string_search6); 
-
-	if(found1!=string::npos || found2!=string::npos || found3!=string::npos || found4!=string::npos || found5!=string::npos || found6!=string::npos){
-	  photon_triggers_in_run.push_back(hltname);
-	}
+        if(found1!=string::npos) triggers_in_run.push_back(hltname);
         
       }//loop over ntriggers
 
       //This has to be clean for every run as Menu get changed frequently
       all_triggers.clear(); 
   
-      for(int x = 0; x< (int)photon_triggers_in_run.size();x++){
+      for(int x = 0; x< (int)triggers_in_run.size();x++){
         bool found = false;
 
         for(int i = 0; i< (int)all_triggers.size();i++){
-          if(all_triggers[i]==photon_triggers_in_run[x]) found = true;
+          if(all_triggers[i]==triggers_in_run[x]) found = true;
         }//loop all triggers
 
         if(!found)
-          all_triggers.push_back(photon_triggers_in_run[x]);
-      }//loop photon triggers
-    }//loop over all available triggers
+          all_triggers.push_back(triggers_in_run[x]);
+      }//loop over selected triggers
+    }
+  }
 
+  else {
+    // if init returns FALSE, initialisation has NOT succeeded, which indicates a problem
+    // with the file and/or code and needs to be investigated!
+    std::cout << " HLT config extraction failure with process name " << hltlabel_;
+    // In this case, all access methods will return empty values!
   }
-  else{
-    std::cout << " HLT config extraction failure with name " << "HLTConfigProvider" << std::endl;
+
+  changed = true;
+  if (hltPrescale_.init(iRun, iSetup, hltlabel_, changed)) {
+    if (changed) {
+      // The HLT config has actually changed wrt the previous Run, hence rebook your
+      // histograms or do anything else dependent on the revised HLT config
+    }
   }
-    
- if(debug_){
+  else {
+    // if init returns FALSE, initialisation has NOT succeeded, which indicates a problem
+    // with the file and/or code and needs to be investigated!
+    std::cout << " HLT prescale extraction failure with process name " << hltlabel_;
+    // In this case, all access methods will return empty values!
+  }
+
+  if(debug_){
     cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"----------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"the triggers in HLT list till now are:"<<endl;
     for(int i = 0; i< (int)all_triggers.size();i++) cout<<"\t"<<all_triggers[i]<<endl;
   }    
+}
+
+void TM::endRun(const edm::Run&, const edm::EventSetup&) {
 }
 
 DEFINE_FWK_MODULE(TM);

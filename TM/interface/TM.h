@@ -6,6 +6,12 @@
 //#include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/transform.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
@@ -41,20 +47,21 @@
 #pragma extra_include "std::vector";
 #endif
 
-class TM : public edm::one::EDAnalyzer<edm::one::SharedResources> {
+class TM : public edm::one::EDAnalyzer<edm::one::SharedResources, edm::one::WatchRuns> {
    public:
       explicit TM(const edm::ParameterSet&);
-      ~TM();
-
+      ~TM() override;
+      void beginRun(const edm::Run&, const edm::EventSetup&) override;
+      void analyze(const edm::Event&, const edm::EventSetup&) override;
+      void endRun(const edm::Run&, const edm::EventSetup&) override;
 
    private:
-      virtual void beginJob() ;
-      virtual void beginRun(const edm::Run& , const edm::EventSetup&);
-      virtual void analyze(const edm::Event&, const edm::EventSetup&);
-      virtual void endJob() ;
+      //void beginJob(const edm::Run&, const edm::Event&, const edm::EventSetup&) override;
+      //void beginRun(const edm::Run&, const edm::Event&, const edm::EventSetup&) override;
+      //void analyze(const edm::Event&, const edm::EventSetup&) override;
+      //void endJob() override;
       TFile* file;
       TTree* tree_;
-      const size_t MaxN;
 
       bool debug_;
       bool fillPhotInfo_;

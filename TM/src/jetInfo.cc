@@ -88,11 +88,17 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
     //std::cout<<"dR_genBs: "<<dR_genBs<<std::endl;
     TLorentzVector diB = v1 + v2;
 
+
     edm::View<pat::Jet>::const_iterator jet;
     pat::Jet matchedJet;
     float deltar = 0.4;
+    bool foundJet = false;
     for(jet = jets.begin(); jet != jets.end(); ++jet){
+      //if(jet->pt() < 10.) continue;
+      //if(abs(jet->eta()) > 2.4) continue;
+
       if(reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi()) < deltar){
+        foundJet = true;
         deltar = reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi());
         matchedJet = *jet;
       }
@@ -100,8 +106,39 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
     }
     //std::cout<<"matchedJet: "<<matchedJet.pt()<<"\t"<<matchedJet.eta()<<"\t"<<matchedJet.phi()<<std::endl;
 
-    // select signal events where bi-b system is boosted and match to a reco jet
-    if(dR_genBs < 0.8 && matchedJet.pt() > 20.){
+    // select signal events where di-b system is boosted and match to a reco jet
+/*
+    //Check
+    deltar = 0.4;
+    int nbMatched = 0;
+    pat::Jet matchedJet_test;
+    for(jet = jets.begin(); jet != jets.end(); ++jet){
+      //bool isbtag = (jet->bDiscriminator("pfDeepFlavourJetTags:probb") + jet->bDiscriminator("pfDeepFlavourJetTags:probbb") + jet->bDiscriminator("pfDeepFlavourJetTags:problepb")) > 0.0494;
+      //if(!isbtag) continue;
+      if(jet->pt() < 10.) continue;
+      if(abs(jet->eta()) > 2.4) continue;
+      foundJet = false;
+
+      if(reco::deltaR(jet->eta(), jet->phi(), v1.Eta(), v1.Phi()) < deltar){
+         foundJet=true;
+         deltar=reco::deltaR(jet->eta(), jet->phi(), v1.Eta(), v1.Phi());
+      }
+      if(reco::deltaR(jet->eta(), jet->phi(), v2.Eta(), v2.Phi()) < deltar){
+         foundJet=true;
+         deltar=reco::deltaR(jet->eta(), jet->phi(), v2.Eta(), v2.Phi());
+      }
+      if(foundJet){
+         nbMatched ++;
+         matchedJet_test = *jet;
+      }
+    }
+*/
+    //std::cout<<"Check: matchedJet: "<<matchedJet_test.pt()<<"\t"<<matchedJet_test.eta()<<"\t"<<matchedJet_test.phi()<<std::endl;
+    //if(reco::deltaR(matchedJet, matchedJet_test) > 0) std::cout<<"Check: "<<" nbMatched = "<<nbMatched<<" deltaR = "<<reco::deltaR(matchedJet, matchedJet_test)<<std::endl;
+
+    // select signal events where di-b system is boosted and match to a reco jet
+    if(dR_genBs < 0.8 && foundJet){
+    //if(nbMatched == 1){
       deltar = 0.4;
       for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
         if(reco::deltaR(matchedJet, *genjet) < deltar){
@@ -263,7 +300,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
 
     edm::View<pat::Jet>::const_iterator jet;
     for(jet = jets.begin(); jet != jets.end(); ++jet){
-      if(jet->pt() > 20.) continue;
+//      if(jet->pt() < 20.) continue;
       float deltar = 0.4;
       for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
         if(reco::deltaR(*jet, *genjet) < deltar){
@@ -467,8 +504,7 @@ void jetInfo::SetBranches(){
   AddBranch(&jet_sv_dxy, "jet_sv_dxy");
   AddBranch(&jet_sv_dxysig, "jet_sv_dxysig");
   AddBranch(&jet_sv_d3d, "jet_sv_d3d");
-  AddBranch(&jet_sv_d3d, "jet_sv_d3d");
-  AddBranch(&jet_sv_d3d, "jet_sv_d3d");
+  AddBranch(&jet_sv_d3dsig, "jet_sv_d3dsig");
   AddBranch(&jet_sv_ntrack, "jet_sv_ntrack");
   AddBranch(&jet_sv_chi2, "jet_sv_chi2");
   AddBranch(&jet_sv_dxy, "jet_sv_dxy");

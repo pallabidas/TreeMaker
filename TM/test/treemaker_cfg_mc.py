@@ -1,15 +1,15 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.Eras.Era_Run2_2018_cff import Run2_2018
 
-process = cms.Process("NTuple")
+process = cms.Process("NTuple", Run2_2018)
 process.load("PhysicsTools.PatAlgos.patSequences_cff")
 process.load("Configuration.Geometry.GeometryRecoDB_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
-
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '124X_mcRun3_2022_realistic_v8', '')
 
 from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
 
@@ -36,7 +36,7 @@ updateJetCollection(
 
 #updateJetCollection(
 #   process,
-#   jetSource = cms.InputTag('slimmedJets'),
+#   jetSource = cms.InputTag('updatedPatJetsTransientCorrectedNewDFTraining'),
 #   labelName = 'UpdatedJEC',
 #   jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute', 'L2L3Residual']), 'None')  # Update: Safe to always add 'L2L3Residual' as MC contains dummy L2L3Residual corrections (always set to 1)
 #)
@@ -55,6 +55,7 @@ readFiles.extend( [
 process.source = cms.Source("PoolSource",
     fileNames = readFiles
 )
+
 
 #closes files after code is done running on that file
 process.options = cms.untracked.PSet(
@@ -88,7 +89,7 @@ process.ecalBadCalibReducedMINIAODFilter = cms.EDFilter(
 #input to analyzer
 process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.demo = cms.EDAnalyzer('TM',
-                              debug_               = cms.untracked.bool(True),
+                              debug_               = cms.untracked.bool(False),
                               isSignal_            = cms.untracked.bool(True),
                               isMC_                = cms.untracked.bool(True),
                               fillgenparticleInfo_ = cms.untracked.bool(False),  #false for data
@@ -99,10 +100,9 @@ process.demo = cms.EDAnalyzer('TM',
                               filleventInfo_       = cms.untracked.bool(True), 
                               fillpileUpInfo_      = cms.untracked.bool(False),   #false for data
                               pileUpLabel_         = cms.untracked.InputTag("slimmedAddPileupInfo"),
-                              filltriggerInfo_     = cms.untracked.bool(False),  # FIXME
+                              filltriggerInfo_     = cms.untracked.bool(True),
                               hltlabel_            = cms.untracked.string("HLT"),
                               HLTriggerResults_    = cms.untracked.InputTag("TriggerResults","","HLT"),
-                              triggerEventTag_     = cms.untracked.InputTag("hltTriggerSummaryAOD","","HLT"),
                               fillvertexInfo_      = cms.untracked.bool(False),
                               vertexLabel_         = cms.untracked.InputTag("offlineSlimmedPrimaryVertices","",""),
                               fillmuonInfo_        = cms.untracked.bool(False),
@@ -130,6 +130,9 @@ process.demo = cms.EDAnalyzer('TM',
                               stageL1Trigger       = cms.uint32(1),
                               )
 
+from Configuration.Eras.Modifier_stage2L1Trigger_cff import stage2L1Trigger
+stage2L1Trigger.toModify(process.demo, stageL1Trigger = 2)
+
 process.TFileService = cms.Service("TFileService",
       fileName = cms.string("histo.root"),
       closeFileFast = cms.untracked.bool(True)
@@ -153,10 +156,10 @@ process.puppi.useExistingWeights = True
 #All paths are here
 process.p = cms.Path(
 #    process.egammaPostRecoSeq*
-    process.ecalBadCalibReducedMINIAODFilter*
-    #process.patJetCorrFactorsUpdatedJEC*
-    #process.updatedPatJetsUpdatedJEC*
-    #process.selectedUpdatedPatJetsUpdatedJEC*
+#    process.ecalBadCalibReducedMINIAODFilter*
+#    process.patJetCorrFactorsUpdatedJEC*
+#    process.updatedPatJetsUpdatedJEC*
+#    process.selectedUpdatedPatJetsUpdatedJEC*
     process.fullPatMetSequence*
     process.puppiMETSequence*
     process.fullPatMetSequencePuppi*
@@ -165,16 +168,15 @@ process.p = cms.Path(
 
 process.p.associate(process.patAlgosToolsTask)
 
-
 # reduce verbosity
 process.MessageLogger.cerr.FwkReport.reportEvery = cms.untracked.int32(1)
 
 # process number of events
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(2) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.schedule=cms.Schedule(process.p)
 
-process.options.numberOfThreads=cms.untracked.uint32(4)
+process.options.numberOfThreads=cms.untracked.uint32(8)
 process.options.numberOfStreams=cms.untracked.uint32(0)
 
 #print process.dumpPython()
