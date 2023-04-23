@@ -94,8 +94,10 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
     float deltar = 0.4;
     bool foundJet = false;
     for(jet = jets.begin(); jet != jets.end(); ++jet){
-      //if(jet->pt() < 10.) continue;
-      //if(abs(jet->eta()) > 2.4) continue;
+      if(jet->pt() < 10.) continue;
+      if(abs(jet->eta()) > 2.4) continue;
+      bool jet_id = (jet->neutralHadronEnergyFraction() < 0.9) && (jet->neutralEmEnergyFraction() < 0.9) && (jet->neutralMultiplicity()+ jet->chargedMultiplicity() > 1) && (jet->muonEnergyFraction() < 0.8) && (jet->chargedHadronEnergyFraction() > 0) && (jet->chargedMultiplicity() > 0) && (jet->chargedEmEnergyFraction() < 0.8);
+      if(!jet_id) continue;
 
       if(reco::deltaR(jet->eta(), jet->phi(), diB.Eta(), diB.Phi()) < deltar){
         foundJet = true;
@@ -192,6 +194,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
         jet_sv_ntrack.push_back(jetsv->numberOfDaughters());
       }
 
+      jet_label = 1;
       jet_pt = matchedJet.pt();
       jet_eta = matchedJet.eta();
       jet_phi = matchedJet.phi();
@@ -300,7 +303,11 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
 
     edm::View<pat::Jet>::const_iterator jet;
     for(jet = jets.begin(); jet != jets.end(); ++jet){
-//      if(jet->pt() < 20.) continue;
+      if(jet->pt() < 10.) continue;
+      if(abs(jet->eta()) > 2.4) continue;
+      bool jet_id = (jet->neutralHadronEnergyFraction() < 0.9) && (jet->neutralEmEnergyFraction() < 0.9) && (jet->neutralMultiplicity()+ jet->chargedMultiplicity() > 1) && (jet->muonEnergyFraction() < 0.8) && (jet->chargedHadronEnergyFraction() > 0) && (jet->chargedMultiplicity() > 0) && (jet->chargedEmEnergyFraction() < 0.8);
+      if(!jet_id) continue;
+
       float deltar = 0.4;
       for(auto genjet = genjets.begin(); genjet != genjets.end(); ++genjet){
         if(reco::deltaR(*jet, *genjet) < deltar){
@@ -353,6 +360,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
         jet_sv_ntrack.push_back(jetsv->numberOfDaughters());
       }
 
+      jet_label = 0;
       jet_pt = jet->pt();
       jet_eta = jet->eta();
       jet_phi = jet->phi();
@@ -461,6 +469,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
 
 void jetInfo::SetBranches(){
   if(debug_)    std::cout<<"setting branches: calling AddBranch of baseTree"<<std::endl;
+  AddBranch(&jet_label, "jet_label");
   AddBranch(&jet_pt, "jet_pt");
   AddBranch(&jet_eta, "jet_eta");
   AddBranch(&jet_phi, "jet_phi");
@@ -552,6 +561,7 @@ void jetInfo::SetBranches(){
 
 void jetInfo::Clear(){
   if(debug_)std::cout<<"clearing jet info"<<std::endl;
+  jet_label = 0;
   jet_pt = 0;
   jet_eta = 0;
   jet_phi = 0;

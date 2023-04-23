@@ -60,6 +60,7 @@ class jetInfo : public baseTree{
 
   //edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> track_builder_token_;
 
+  float jet_label;
   float jet_pt;
   float jet_eta;
   float jet_phi;
