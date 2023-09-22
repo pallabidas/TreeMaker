@@ -98,6 +98,7 @@ class jetInfo : public baseTree{
   float jet_deepjet_probg;
   float jet_deepjet_probbb;
   float jet_deepjet_problepb;
+  float jet_pnet_probXbb;
   float jet_genmatch_pt;
   float jet_genmatch_eta;
   float jet_genmatch_phi;

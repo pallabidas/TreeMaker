@@ -216,6 +216,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
       jet_deepjet_probg = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probg");
       jet_deepjet_probbb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:probbb");
       jet_deepjet_problepb = matchedJet.bDiscriminator("pfDeepFlavourJetTags:problepb");
+      jet_pnet_probXbb = matchedJet.bDiscriminator("pfMassDecorrelatedParticleNetJetTags:probXbb");
 
       // fill clustered particles information
       int nConstituents = matchedJet.numberOfSourceCandidatePtrs();
@@ -382,6 +383,7 @@ void jetInfo::Fill(const edm::Event& iEvent, const edm::EventSetup& iSetup, Trac
       jet_deepjet_probg = jet->bDiscriminator("pfDeepFlavourJetTags:probg");
       jet_deepjet_probbb = jet->bDiscriminator("pfDeepFlavourJetTags:probbb");
       jet_deepjet_problepb = jet->bDiscriminator("pfDeepFlavourJetTags:problepb");
+      jet_pnet_probXbb = jet->bDiscriminator("pfMassDecorrelatedParticleNetJetTags:probXbb");
 
       // fill clustered particles information
       int nConstituents = jet->numberOfSourceCandidatePtrs();
@@ -491,6 +493,7 @@ void jetInfo::SetBranches(){
   AddBranch(&jet_deepjet_probg, "jet_deepjet_probg");
   AddBranch(&jet_deepjet_probbb, "jet_deepjet_probbb");
   AddBranch(&jet_deepjet_problepb, "jet_deepjet_problepb");
+  AddBranch(&jet_pnet_probXbb, "jet_pnet_probXbb");
   AddBranch(&jet_genmatch_pt, "jet_genmatch_pt");
   AddBranch(&jet_genmatch_eta, "jet_genmatch_eta");
   AddBranch(&jet_genmatch_phi, "jet_genmatch_phi");
@@ -583,6 +586,7 @@ void jetInfo::Clear(){
   jet_deepjet_probg = 0;
   jet_deepjet_probbb = 0;
   jet_deepjet_problepb = 0;
+  jet_pnet_probXbb = 0;
   jet_genmatch_pt = 0;
   jet_genmatch_eta = 0;
   jet_genmatch_phi = 0;

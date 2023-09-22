@@ -29,7 +29,8 @@ updateJetCollection(
       'pfDeepFlavourJetTags:probuds',
       'pfDeepFlavourJetTags:probg',
       'pfDeepFlavourJetTags:probbb',
-      'pfDeepFlavourJetTags:problepb'
+      'pfDeepFlavourJetTags:problepb',
+      'pfMassDecorrelatedParticleNetJetTags:probXbb'
       ],
    postfix='NewDFTraining'
 )
